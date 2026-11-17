@@ -14,6 +14,18 @@
       justify-content: center;
     }
 
+    .loader {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+    }
+
     .timeline-line {
       background: #000;
     }
@@ -36,6 +48,40 @@
   </style>
 </head>
 <body>
+  <div class="loader">
+    <label for="timeline-file">Load timeline file</label>
+    <input id="timeline-file" type="file" accept=".json,application/json">
+    <span id="timeline-status">No timeline loaded.</span>
+  </div>
+
   <div class="timeline-line" aria-hidden="true"></div>
+
+  <script>
+    let timeline = null;
+
+    const fileInput = document.getElementById('timeline-file');
+    const status = document.getElementById('timeline-status');
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      try {
+        const data = JSON.parse(await file.text());
+
+        if (data.schema_version !== 1 || !Array.isArray(data.events)) {
+          throw new Error('Not a timeline file (expected schema_version 1 and an events array).');
+        }
+
+        timeline = data;
+        status.textContent = `Loaded ${data.title} — ${data.events.length} events.`;
+        console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
+      } catch (error) {
+        timeline = null;
+        status.textContent = `Could not load file: ${error.message}`;
+        console.error('Could not load timeline file:', error);
+      }
+    });
+  </script>
 </body>
 </html>
