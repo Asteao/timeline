@@ -1,0 +1,588 @@
+{
+  "schema_version": 1,
+  "id": "starship-flight-15",
+  "title": "Starship Flight 15",
+  "description": "Starship's 15th flight, from Starbase, Texas. Liftoff (T0) was Friday, November 13, 2026, at 22:47:36 UTC. Times are the approximate countdown and flight timeline published by SpaceX, converted from T-minus / T-plus offsets from T0. Starship deployed 26 Starlink V3 satellites, coasted for more than 20 hours, and was caught by Mechazilla on Saturday, November 14, 2026.",
+  "categories": [
+    {
+      "id": "countdown",
+      "label": "Countdown"
+    },
+    {
+      "id": "flight",
+      "label": "Flight"
+    }
+  ],
+  "events": [
+    {
+      "id": "flight-director-poll-go-propellant-load",
+      "title": "SpaceX Flight Director conducts poll and verifies GO for propellant load",
+      "start": {
+        "at": "2026-11-13T21:57:36Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "booster-lox-load-underway",
+      "title": "Booster LOX (liquid oxygen) load underway",
+      "start": {
+        "at": "2026-11-13T22:12:03Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "booster-fuel-load-underway",
+      "title": "Booster fuel (liquid methane) load underway",
+      "start": {
+        "at": "2026-11-13T22:12:06Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "ship-lox-load-underway",
+      "title": "Ship LOX load underway",
+      "start": {
+        "at": "2026-11-13T22:12:24Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "ship-fuel-load-underway",
+      "title": "Ship fuel load underway",
+      "start": {
+        "at": "2026-11-13T22:12:25Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "raptor-engine-chill",
+      "title": "Raptor begins engine chill on booster and ship",
+      "start": {
+        "at": "2026-11-13T22:25:56Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "booster-propellant-load-complete",
+      "title": "Booster propellant load complete",
+      "start": {
+        "at": "2026-11-13T22:44:46Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "ship-propellant-load-complete",
+      "title": "Ship propellant load complete",
+      "start": {
+        "at": "2026-11-13T22:45:26Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "flight-director-go-for-launch",
+      "title": "SpaceX flight director verifies GO for launch",
+      "start": {
+        "at": "2026-11-13T22:47:06Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "flame-diverter-activation",
+      "title": "Flame diverter activation",
+      "start": {
+        "at": "2026-11-13T22:47:19Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "booster-engine-startup-command",
+      "title": "Booster engine startup command",
+      "start": {
+        "at": "2026-11-13T22:47:33Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "excitement-guaranteed",
+      "title": "Excitement guaranteed",
+      "start": {
+        "at": "2026-11-13T22:47:36Z",
+        "precision": "second"
+      },
+      "category": "countdown",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "liftoff",
+      "title": "Liftoff",
+      "start": {
+        "at": "2026-11-13T22:47:36Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "max-q",
+      "title": "Max Q (moment of peak aerodynamic stress on the rocket)",
+      "start": {
+        "at": "2026-11-13T22:48:34Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "super-heavy-meco",
+      "title": "Super Heavy MECO (most engines cut off)",
+      "start": {
+        "at": "2026-11-13T22:49:55Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "hot-staging",
+      "title": "Hot-staging (Starship Raptor ignition and stage separation)",
+      "start": {
+        "at": "2026-11-13T22:49:57Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "super-heavy-boostback-burn-start",
+      "title": "Super Heavy boostback burn start",
+      "start": {
+        "at": "2026-11-13T22:50:02Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "super-heavy-boostback-burn-shutdown",
+      "title": "Super Heavy boostback burn shutdown",
+      "start": {
+        "at": "2026-11-13T22:50:38Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "super-heavy-landing-burn-start",
+      "title": "Super Heavy landing burn start",
+      "start": {
+        "at": "2026-11-13T22:53:46Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "super-heavy-landing-burn-shutdown-and-catch",
+      "title": "Super Heavy landing burn shutdown and catch",
+      "start": {
+        "at": "2026-11-13T22:54:11Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-engine-cutoff",
+      "title": "Starship engine cutoff",
+      "start": {
+        "at": "2026-11-13T22:55:45Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-orbital-insertion-burn-start",
+      "title": "Starship orbital insertion burn start",
+      "start": {
+        "at": "2026-11-13T23:13:46Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-orbital-insertion-burn-shutdown",
+      "title": "Starship orbital insertion burn shutdown",
+      "start": {
+        "at": "2026-11-13T23:14:06Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "payload-deploy-start",
+      "title": "Payload deploy start",
+      "start": {
+        "at": "2026-11-13T23:22:37Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "payload-deploy-complete",
+      "title": "Payload deploy complete",
+      "start": {
+        "at": "2026-11-14T00:05:16Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "early-hawaii-return-check",
+      "title": "Early Hawaii Return Check",
+      "start": {
+        "at": "2026-11-14T00:15:22Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "mid-chile-return-check",
+      "title": "Mid Chile Return Check",
+      "start": {
+        "at": "2026-11-14T06:03:11Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "final-hawaii-return-check",
+      "title": "Final Hawaii Return Check",
+      "start": {
+        "at": "2026-11-14T19:29:31Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "deorbit-burn-start",
+      "title": "Deorbit burn start",
+      "start": {
+        "at": "2026-11-14T20:23:33Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "deorbit-burn-shutdown",
+      "title": "Deorbit burn shutdown",
+      "start": {
+        "at": "2026-11-14T20:23:43Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-entry",
+      "title": "Starship entry",
+      "start": {
+        "at": "2026-11-14T20:58:22Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-transonic",
+      "title": "Starship is transonic",
+      "start": {
+        "at": "2026-11-14T21:17:10Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-subsonic",
+      "title": "Starship is subsonic",
+      "start": {
+        "at": "2026-11-14T21:17:49Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "landing-burn-start",
+      "title": "Landing burn start",
+      "start": {
+        "at": "2026-11-14T21:19:52Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "landing-flip",
+      "title": "Landing flip",
+      "start": {
+        "at": "2026-11-14T21:19:54Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "landing-burn-3-to-2-engines",
+      "title": "Landing burn 3 to 2 engines",
+      "start": {
+        "at": "2026-11-14T21:20:02Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "landing-burn-2-to-1-engine",
+      "title": "Landing burn 2 to 1 engine",
+      "start": {
+        "at": "2026-11-14T21:20:09Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "starship-landing-burn-shutdown-and-catch",
+      "title": "Starship landing burn shutdown and catch",
+      "start": {
+        "at": "2026-11-14T21:20:10Z",
+        "precision": "second"
+      },
+      "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    }
+  ]
+}
