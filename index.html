@@ -14,6 +14,15 @@
       justify-content: center;
     }
 
+    #timeline-status {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+    }
+
     .timeline-line {
       background: #000;
     }
@@ -36,6 +45,42 @@
   </style>
 </head>
 <body>
+  <p id="timeline-status">Loading timeline…</p>
+
   <div class="timeline-line" aria-hidden="true"></div>
+
+  <script>
+    const TIMELINE_URL = 'https://timeline.asteao.net/timelines/starship-flight-15.json';
+
+    let timeline = null;
+
+    async function fetchTimeline(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch timeline: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.schema_version !== 1 || !Array.isArray(data.events)) {
+        throw new Error('Not a timeline file (expected schema_version 1 and an events array).');
+      }
+
+      return data;
+    }
+
+    const status = document.getElementById('timeline-status');
+
+    fetchTimeline(TIMELINE_URL)
+      .then((data) => {
+        timeline = data;
+        status.textContent = `Loaded ${data.title} — ${data.events.length} events.`;
+        console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
+      })
+      .catch((error) => {
+        status.textContent = `Could not load timeline: ${error.message}`;
+        console.error('Could not load timeline:', error);
+      });
+  </script>
 </body>
 </html>
