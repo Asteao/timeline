@@ -78,6 +78,13 @@
         height: 12px;
         display: flex;
         align-items: center;
+        /* Fixed padding at both ends, in viewport units so it does not
+           grow with zoom: the margin is part of the scrollable area, so
+           scrolling to either end still leaves this much empty space
+           before the first / after the last dot. At 1x the track (80%)
+           plus both margins (10vw each) is exactly the viewport width,
+           so the 1x look is unchanged. */
+        margin: 0 10vw;
       }
 
       .timeline-line {
@@ -99,6 +106,8 @@
         height: calc(80vh * var(--zoom, 1));
         display: flex;
         justify-content: center;
+        /* Same fixed end padding as landscape, top and bottom. */
+        margin: 10vh 0;
       }
 
       .timeline-line {
@@ -148,7 +157,7 @@
 
     let zoom = 1;
     const MIN_ZOOM = 1;
-    const MAX_ZOOM = 8;
+    const MAX_ZOOM = 128;
 
     const zoomInButton = document.getElementById('zoom-in');
     const zoomOutButton = document.getElementById('zoom-out');
