@@ -14,29 +14,81 @@
       justify-content: center;
     }
 
+    .timeline-track {
+      position: relative;
+    }
+
     .timeline-line {
       background: #000;
     }
 
-    /* Wider than tall: horizontal line. */
+    .event-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #000;
+    }
+
+    .event-dot::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Wider than tall: horizontal line, dots positioned left to right. */
     @media (orientation: landscape) {
-      .timeline-line {
+      .timeline-track {
         width: 80%;
+        height: 12px;
+        display: flex;
+        align-items: center;
+      }
+
+      .timeline-line {
+        width: 100%;
         height: 2px;
+      }
+
+      .event-dot {
+        left: var(--pos);
+        top: 50%;
+        transform: translate(-50%, -50%);
       }
     }
 
-    /* Taller than wide: vertical line. */
+    /* Taller than wide: vertical line, dots positioned top to bottom. */
     @media (orientation: portrait) {
+      .timeline-track {
+        width: 12px;
+        height: 80vh;
+        display: flex;
+        justify-content: center;
+      }
+
       .timeline-line {
         width: 2px;
-        height: 80vh;
+        height: 100%;
+      }
+
+      .event-dot {
+        top: var(--pos);
+        left: 50%;
+        transform: translate(-50%, -50%);
       }
     }
   </style>
 </head>
 <body>
-  <div class="timeline-line" aria-hidden="true"></div>
+  <div class="timeline-track">
+    <div class="timeline-line" aria-hidden="true"></div>
+  </div>
 
   <script>
     const TIMELINE_URL = 'https://timeline.asteao.net/timelines/starship-flight-15.json';
@@ -58,12 +110,29 @@
       return data;
     }
 
+    function drawDots(events) {
+      const times = events.map((event) => Date.parse(event.start.at));
+      const start = Math.min(...times);
+      const end = Math.max(...times);
+      const track = document.querySelector('.timeline-track');
+
+      events.forEach((event, index) => {
+        const dot = document.createElement('div');
+        dot.className = 'event-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        const position = end === start ? 50 : ((times[index] - start) / (end - start)) * 100;
+        dot.style.setProperty('--pos', `${position}%`);
+        track.appendChild(dot);
+      });
+    }
+
     console.log('Loading timeline…');
 
     fetchTimeline(TIMELINE_URL)
       .then((data) => {
         timeline = data;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
+        drawDots(data.events);
       })
       .catch((error) => {
         console.error('Could not load timeline:', error);
