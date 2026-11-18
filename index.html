@@ -26,7 +26,7 @@
     /* Experiment: custom slider zoom control, fixed at the bottom centre.
        No range input: the bar is a div, thick and rounded at both ends,
        outlined with a thin light-grey line. The value indicator is a
-       thin white circle, a bit smaller than the bar, with a thin
+       thin white circle, the same size as the bar, with a thin
        light-grey outline, and the part of the bar behind it fills with
        semi-transparent light grey as the slider moves.
        --frac (0 to 1) positions both. */
@@ -56,7 +56,7 @@
       top: 0;
       left: 0;
       height: 100%;
-      width: calc(var(--frac, 0) * (100% - 40px) + 20px);
+      width: calc(var(--frac, 0) * (100% - 48px) + 24px);
       background: rgba(187, 187, 187, 0.35);
       z-index: 0;
     }
@@ -67,11 +67,11 @@
        covered button is the disabled one. */
     .slider-track button {
       position: absolute;
-      top: 4px;
-      width: 40px;
-      height: 40px;
+      top: 0;
+      width: 48px;
+      height: 48px;
       padding: 0;
-      font-size: 1.25rem;
+      font-size: 1.5rem;
       line-height: 1;
       background: transparent;
       border: none;
@@ -94,10 +94,10 @@
 
     .slider-thumb {
       position: absolute;
-      top: 4px;
-      left: calc(var(--frac, 0) * (100% - 40px));
-      width: 40px;
-      height: 40px;
+      top: 0;
+      left: calc(var(--frac, 0) * (100% - 48px));
+      width: 48px;
+      height: 48px;
       box-sizing: border-box;
       border-radius: 50%;
       border: 1px solid #bbb;
