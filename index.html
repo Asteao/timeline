@@ -23,30 +23,6 @@
       overflow: auto;
     }
 
-    .zoom-controls {
-      position: fixed;
-      top: 1rem;
-      right: 1rem;
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .zoom-controls button {
-      width: 2rem;
-      height: 2rem;
-      font-size: 1.1rem;
-      line-height: 1;
-      background: #fff;
-      border: 1px solid #000;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .zoom-controls button:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-
     /* Experiment: custom slider zoom control, fixed at the bottom centre.
        No range input: the bar is a div, thick and rounded at both ends,
        outlined with a thin grey line. The value indicator is a circle
@@ -81,6 +57,38 @@
       height: 100%;
       width: calc(var(--frac, 0) * (100% - 24px) + 12px);
       background: rgba(153, 153, 153, 0.35);
+      z-index: 0;
+    }
+
+    /* + / - buttons inside the bar, one at each end. They sit above
+       the fill and below the thumb, so at 1x the thumb covers the -
+       button (and at 128x it covers the + button) — in both cases the
+       covered button is the disabled one. */
+    .slider-track button {
+      position: absolute;
+      top: 0;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      font-size: 1rem;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .slider-track button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #zoom-out {
+      left: 0;
+    }
+
+    #zoom-in {
+      right: 0;
     }
 
     .slider-thumb {
@@ -91,6 +99,7 @@
       height: 24px;
       border-radius: 50%;
       background: linear-gradient(to right, #fff, #999);
+      z-index: 2;
     }
 
     .timeline-track {
@@ -197,15 +206,13 @@
   </style>
 </head>
 <body>
-  <div class="zoom-controls">
-    <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
-    <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
-  </div>
-
-  <!-- Experiment: custom slider zoom control. -->
+  <!-- Experiment: custom slider zoom control, with the + / - buttons
+       inside the bar at each end. -->
   <div class="zoom-slider">
     <div class="slider-track" id="zoom-track" role="slider" tabindex="0" aria-label="Zoom level" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0" aria-valuetext="1x">
       <div class="slider-fill" aria-hidden="true"></div>
+      <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+      <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
       <div class="slider-thumb" aria-hidden="true"></div>
     </div>
   </div>
@@ -293,9 +300,14 @@
       setZoom(zoom / 2, anchor);
     }
 
-    // Baseline method: + / - buttons.
+    // Baseline method: + / - buttons, now inside the slider bar.
+    // Their pointerdown must not reach the slider track, or pressing
+    // - would jump the zoom to 1x instead of stepping down one level.
     zoomInButton.addEventListener('click', () => zoomIn());
     zoomOutButton.addEventListener('click', () => zoomOut());
+    for (const button of [zoomInButton, zoomOutButton]) {
+      button.addEventListener('pointerdown', (event) => event.stopPropagation());
+    }
 
     // Experiment: custom slider, log scale, one step per notch (1x to 128x).
     // Click or drag on the bar to set the zoom; arrow keys work when
