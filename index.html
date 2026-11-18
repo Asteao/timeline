@@ -14,15 +14,6 @@
       justify-content: center;
     }
 
-    #timeline-status {
-      position: absolute;
-      top: 1rem;
-      left: 1rem;
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      font-size: 0.9rem;
-    }
-
     .timeline-line {
       background: #000;
     }
@@ -45,8 +36,6 @@
   </style>
 </head>
 <body>
-  <p id="timeline-status">Loading timeline…</p>
-
   <div class="timeline-line" aria-hidden="true"></div>
 
   <script>
@@ -69,16 +58,14 @@
       return data;
     }
 
-    const status = document.getElementById('timeline-status');
+    console.log('Loading timeline…');
 
     fetchTimeline(TIMELINE_URL)
       .then((data) => {
         timeline = data;
-        status.textContent = `Loaded ${data.title} — ${data.events.length} events.`;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
       })
       .catch((error) => {
-        status.textContent = `Could not load timeline: ${error.message}`;
         console.error('Could not load timeline:', error);
       });
   </script>
