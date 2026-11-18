@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Timeline</title>
   <style>
+    /* No overscroll navigation: without this, scrolling past the left
+       end of the timeline on a Mac trackpad makes Chrome swipe back
+       to the previous page. */
+    html,
+    body {
+      overscroll-behavior: none;
+    }
+
     body {
       margin: 0;
       background: #fff;
