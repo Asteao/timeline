@@ -63,15 +63,9 @@
       align-items: center;
     }
 
-    .zoom-slider span {
-      font-size: 0.9rem;
-      min-width: 2.5rem;
-      text-align: right;
-    }
-
     .slider-track {
       position: relative;
-      width: 10rem;
+      width: 80vw;
       height: 24px;
       border: 1px solid #999;
       border-radius: 999px;
@@ -214,7 +208,6 @@
       <div class="slider-fill" aria-hidden="true"></div>
       <div class="slider-thumb" aria-hidden="true"></div>
     </div>
-    <span id="zoom-label">1x</span>
   </div>
 
   <div class="timeline-pad" aria-hidden="true"></div>
@@ -252,7 +245,6 @@
     const zoomInButton = document.getElementById('zoom-in');
     const zoomOutButton = document.getElementById('zoom-out');
     const zoomTrack = document.getElementById('zoom-track');
-    const zoomLabel = document.getElementById('zoom-label');
 
     function syncZoomUI() {
       const step = Math.log2(zoom);
@@ -261,7 +253,6 @@
       zoomTrack.style.setProperty('--frac', String(step / 7));
       zoomTrack.setAttribute('aria-valuenow', String(step));
       zoomTrack.setAttribute('aria-valuetext', `${zoom}x`);
-      zoomLabel.textContent = `${zoom}x`;
       console.log('Zoom:', `${zoom}x`);
     }
 
