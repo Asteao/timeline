@@ -10,8 +10,33 @@
       background: #fff;
       min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: safe center;
+      justify-content: safe center;
+      overflow: auto;
+    }
+
+    .zoom-controls {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .zoom-controls button {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1.1rem;
+      line-height: 1;
+      background: #fff;
+      border: 1px solid #000;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .zoom-controls button:disabled {
+      opacity: 0.4;
+      cursor: default;
     }
 
     .timeline-track {
@@ -45,7 +70,7 @@
     /* Wider than tall: horizontal line, dots positioned left to right. */
     @media (orientation: landscape) {
       .timeline-track {
-        width: 80%;
+        width: calc(80% * var(--zoom, 1));
         height: 12px;
         display: flex;
         align-items: center;
@@ -67,7 +92,7 @@
     @media (orientation: portrait) {
       .timeline-track {
         width: 12px;
-        height: 80vh;
+        height: calc(80vh * var(--zoom, 1));
         display: flex;
         justify-content: center;
       }
@@ -86,6 +111,11 @@
   </style>
 </head>
 <body>
+  <div class="zoom-controls">
+    <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+    <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
+  </div>
+
   <div class="timeline-track">
     <div class="timeline-line" aria-hidden="true"></div>
   </div>
@@ -110,11 +140,42 @@
       return data;
     }
 
+    const track = document.querySelector('.timeline-track');
+
+    let zoom = 1;
+    const MIN_ZOOM = 1;
+    const MAX_ZOOM = 8;
+
+    const zoomInButton = document.getElementById('zoom-in');
+    const zoomOutButton = document.getElementById('zoom-out');
+
+    function applyZoom() {
+      track.style.setProperty('--zoom', zoom);
+      zoomInButton.disabled = zoom >= MAX_ZOOM;
+      zoomOutButton.disabled = zoom <= MIN_ZOOM;
+      console.log('Zoom:', `${zoom}x`);
+    }
+
+    zoomInButton.addEventListener('click', () => {
+      if (zoom < MAX_ZOOM) {
+        zoom *= 2;
+        applyZoom();
+      }
+    });
+
+    zoomOutButton.addEventListener('click', () => {
+      if (zoom > MIN_ZOOM) {
+        zoom /= 2;
+        applyZoom();
+      }
+    });
+
+    applyZoom();
+
     function drawDots(events) {
       const times = events.map((event) => Date.parse(event.start.at));
       const start = Math.min(...times);
       const end = Math.max(...times);
-      const track = document.querySelector('.timeline-track');
 
       events.forEach((event, index) => {
         const dot = document.createElement('div');
