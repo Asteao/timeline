@@ -224,8 +224,7 @@
     const zoomSlider = document.getElementById('zoom-slider');
     const zoomLabel = document.getElementById('zoom-label');
 
-    function applyZoom() {
-      track.style.setProperty('--zoom', zoom);
+    function syncZoomUI() {
       zoomInButton.disabled = zoom >= MAX_ZOOM;
       zoomOutButton.disabled = zoom <= MIN_ZOOM;
       zoomSlider.value = String(Math.log2(zoom));
@@ -233,22 +232,46 @@
       console.log('Zoom:', `${zoom}x`);
     }
 
-    function setZoom(newZoom) {
-      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
-      applyZoom();
+    // Zoom, keeping the timeline point under `anchor` (client coordinates)
+    // in the same place on screen. Without an anchor the viewport centre
+    // is used, so buttons, slider and keyboard zoom into the middle.
+    // The point's fraction along the track is measured before the zoom
+    // and the page is scrolled afterwards so that same fraction sits
+    // under the anchor again. window.scrollTo clamps at the ends, so
+    // an anchor outside the track (e.g. over the end padding) drifts
+    // slightly instead of scrolling past the end.
+    function setZoom(newZoom, anchor = { x: window.innerWidth / 2, y: window.innerHeight / 2 }) {
+      const oldZoom = zoom;
+      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+      if (clamped === oldZoom) {
+        return;
+      }
+
+      const rect = track.getBoundingClientRect();
+      const fx = rect.width ? (anchor.x - rect.left) / rect.width : 0.5;
+      const fy = rect.height ? (anchor.y - rect.top) / rect.height : 0.5;
+
+      zoom = clamped;
+      track.style.setProperty('--zoom', zoom);
+      syncZoomUI();
+
+      const newRect = track.getBoundingClientRect();
+      const newScrollX = rect.left + window.scrollX - anchor.x + fx * newRect.width;
+      const newScrollY = rect.top + window.scrollY - anchor.y + fy * newRect.height;
+      window.scrollTo(newScrollX, newScrollY);
     }
 
-    function zoomIn() {
-      setZoom(zoom * 2);
+    function zoomIn(anchor) {
+      setZoom(zoom * 2, anchor);
     }
 
-    function zoomOut() {
-      setZoom(zoom / 2);
+    function zoomOut(anchor) {
+      setZoom(zoom / 2, anchor);
     }
 
     // Baseline method: + / - buttons.
-    zoomInButton.addEventListener('click', zoomIn);
-    zoomOutButton.addEventListener('click', zoomOut);
+    zoomInButton.addEventListener('click', () => zoomIn());
+    zoomOutButton.addEventListener('click', () => zoomOut());
 
     // Experiment: slider, log scale, one step per notch (1x to 128x).
     zoomSlider.addEventListener('input', () => {
@@ -266,11 +289,12 @@
       }
       event.preventDefault();
       wheelAccum += event.deltaY;
+      const anchor = { x: event.clientX, y: event.clientY };
       if (wheelAccum <= -100) {
-        zoomIn();
+        zoomIn(anchor);
         wheelAccum = 0;
       } else if (wheelAccum >= 100) {
-        zoomOut();
+        zoomOut(anchor);
         wheelAccum = 0;
       }
     }, { passive: false });
@@ -289,14 +313,16 @@
     // Experiment: double-click the timeline to zoom in,
     // Shift+double-click to zoom out.
     track.addEventListener('dblclick', (event) => {
+      const anchor = { x: event.clientX, y: event.clientY };
       if (event.shiftKey) {
-        zoomOut();
+        zoomOut(anchor);
       } else {
-        zoomIn();
+        zoomIn(anchor);
       }
     });
 
-    applyZoom();
+    track.style.setProperty('--zoom', zoom);
+    syncZoomUI();
 
     function drawDots(events) {
       const times = events.map((event) => Date.parse(event.start.at));
