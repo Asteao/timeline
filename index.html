@@ -47,6 +47,16 @@
       flex: 0 0 auto;
     }
 
+    /* Fixed padding at both ends of the timeline, in viewport units so
+       it does not grow with zoom. These are real elements, not margins:
+       a trailing margin is dropped from the scrollable area, so the
+       far end used to sit flush against the screen edge when zoomed in.
+       At 1x the pads (10vw each) plus the track (80%) are exactly the
+       viewport width, so the 1x look is unchanged. */
+    .timeline-pad {
+      flex: 0 0 auto;
+    }
+
     .timeline-line {
       background: #000;
     }
@@ -73,18 +83,20 @@
 
     /* Wider than tall: horizontal line, dots positioned left to right. */
     @media (orientation: landscape) {
+      body {
+        flex-direction: row;
+      }
+
+      .timeline-pad {
+        width: 10vw;
+        height: 12px;
+      }
+
       .timeline-track {
         width: calc(80% * var(--zoom, 1));
         height: 12px;
         display: flex;
         align-items: center;
-        /* Fixed padding at both ends, in viewport units so it does not
-           grow with zoom: the margin is part of the scrollable area, so
-           scrolling to either end still leaves this much empty space
-           before the first / after the last dot. At 1x the track (80%)
-           plus both margins (10vw each) is exactly the viewport width,
-           so the 1x look is unchanged. */
-        margin: 0 10vw;
       }
 
       .timeline-line {
@@ -101,13 +113,20 @@
 
     /* Taller than wide: vertical line, dots positioned top to bottom. */
     @media (orientation: portrait) {
+      body {
+        flex-direction: column;
+      }
+
+      .timeline-pad {
+        width: 12px;
+        height: 10vh;
+      }
+
       .timeline-track {
         width: 12px;
         height: calc(80vh * var(--zoom, 1));
         display: flex;
         justify-content: center;
-        /* Same fixed end padding as landscape, top and bottom. */
-        margin: 10vh 0;
       }
 
       .timeline-line {
@@ -129,9 +148,11 @@
     <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
   </div>
 
+  <div class="timeline-pad" aria-hidden="true"></div>
   <div class="timeline-track">
     <div class="timeline-line" aria-hidden="true"></div>
   </div>
+  <div class="timeline-pad" aria-hidden="true"></div>
 
   <script>
     const TIMELINE_URL = 'https://timeline.asteao.net/timelines/starship-flight-15.json';
