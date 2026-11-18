@@ -47,7 +47,12 @@
       cursor: default;
     }
 
-    /* Experiment: slider zoom control, fixed at the bottom centre. */
+    /* Experiment: custom slider zoom control, fixed at the bottom centre.
+       No range input: the bar is a div, thick and rounded at both ends,
+       outlined with a thin grey line. The value indicator is a circle
+       as tall as the bar, with a subtle white-to-grey gradient, and the
+       part of the bar behind it fills with semi-transparent grey as
+       the slider moves. --frac (0 to 1) positions both. */
     .zoom-slider {
       position: fixed;
       bottom: 1rem;
@@ -56,20 +61,42 @@
       display: flex;
       gap: 0.5rem;
       align-items: center;
-      background: #fff;
-      border: 1px solid #000;
-      border-radius: 4px;
-      padding: 0.25rem 0.5rem;
-    }
-
-    .zoom-slider input {
-      width: 10rem;
     }
 
     .zoom-slider span {
       font-size: 0.9rem;
       min-width: 2.5rem;
       text-align: right;
+    }
+
+    .slider-track {
+      position: relative;
+      width: 10rem;
+      height: 24px;
+      border: 1px solid #999;
+      border-radius: 999px;
+      background: #fff;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .slider-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: calc(var(--frac, 0) * (100% - 24px) + 12px);
+      background: rgba(153, 153, 153, 0.35);
+    }
+
+    .slider-thumb {
+      position: absolute;
+      top: 0;
+      left: calc(var(--frac, 0) * (100% - 24px));
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(to right, #fff, #999);
     }
 
     .timeline-track {
@@ -181,9 +208,12 @@
     <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
   </div>
 
-  <!-- Experiment: slider zoom control. -->
+  <!-- Experiment: custom slider zoom control. -->
   <div class="zoom-slider">
-    <input id="zoom-slider" type="range" min="0" max="7" step="1" value="0" aria-label="Zoom level">
+    <div class="slider-track" id="zoom-track" role="slider" tabindex="0" aria-label="Zoom level" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0" aria-valuetext="1x">
+      <div class="slider-fill" aria-hidden="true"></div>
+      <div class="slider-thumb" aria-hidden="true"></div>
+    </div>
     <span id="zoom-label">1x</span>
   </div>
 
@@ -221,13 +251,16 @@
 
     const zoomInButton = document.getElementById('zoom-in');
     const zoomOutButton = document.getElementById('zoom-out');
-    const zoomSlider = document.getElementById('zoom-slider');
+    const zoomTrack = document.getElementById('zoom-track');
     const zoomLabel = document.getElementById('zoom-label');
 
     function syncZoomUI() {
+      const step = Math.log2(zoom);
       zoomInButton.disabled = zoom >= MAX_ZOOM;
       zoomOutButton.disabled = zoom <= MIN_ZOOM;
-      zoomSlider.value = String(Math.log2(zoom));
+      zoomTrack.style.setProperty('--frac', String(step / 7));
+      zoomTrack.setAttribute('aria-valuenow', String(step));
+      zoomTrack.setAttribute('aria-valuetext', `${zoom}x`);
       zoomLabel.textContent = `${zoom}x`;
       console.log('Zoom:', `${zoom}x`);
     }
@@ -273,9 +306,47 @@
     zoomInButton.addEventListener('click', () => zoomIn());
     zoomOutButton.addEventListener('click', () => zoomOut());
 
-    // Experiment: slider, log scale, one step per notch (1x to 128x).
-    zoomSlider.addEventListener('input', () => {
-      setZoom(2 ** Number(zoomSlider.value));
+    // Experiment: custom slider, log scale, one step per notch (1x to 128x).
+    // Click or drag on the bar to set the zoom; arrow keys work when
+    // the bar has focus.
+    function sliderStepFromEvent(event) {
+      const rect = zoomTrack.getBoundingClientRect();
+      const frac = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      return Math.round(frac * 7);
+    }
+
+    let sliderDragging = false;
+
+    zoomTrack.addEventListener('pointerdown', (event) => {
+      sliderDragging = true;
+      zoomTrack.setPointerCapture(event.pointerId);
+      setZoom(2 ** sliderStepFromEvent(event));
+    });
+
+    zoomTrack.addEventListener('pointermove', (event) => {
+      if (sliderDragging) {
+        setZoom(2 ** sliderStepFromEvent(event));
+      }
+    });
+
+    zoomTrack.addEventListener('pointerup', () => {
+      sliderDragging = false;
+    });
+
+    zoomTrack.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        zoomIn();
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        zoomOut();
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setZoom(1);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        setZoom(MAX_ZOOM);
+      }
     });
 
     // Experiment: scroll up to zoom in, scroll down to zoom out.
