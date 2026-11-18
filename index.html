@@ -41,6 +41,10 @@
 
     .timeline-track {
       position: relative;
+      /* No shrinking: the track is a flex item of body, and the default
+         flex-shrink: 1 squeezed a zoomed track back to the viewport width,
+         so zoom past the first step had no visible effect. */
+      flex: 0 0 auto;
     }
 
     .timeline-line {
