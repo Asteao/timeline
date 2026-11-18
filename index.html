@@ -25,10 +25,11 @@
 
     /* Experiment: custom slider zoom control, fixed at the bottom centre.
        No range input: the bar is a div, thick and rounded at both ends,
-       outlined with a thin grey line. The value indicator is a circle
-       as tall as the bar, with a subtle white-to-grey gradient, and the
-       part of the bar behind it fills with semi-transparent grey as
-       the slider moves. --frac (0 to 1) positions both. */
+       outlined with a thin light-grey line. The value indicator is a
+       thin white circle, a bit smaller than the bar, with a thin
+       light-grey outline, and the part of the bar behind it fills with
+       semi-transparent light grey as the slider moves.
+       --frac (0 to 1) positions both. */
     .zoom-slider {
       position: fixed;
       bottom: 1rem;
@@ -43,7 +44,7 @@
       position: relative;
       width: 80vw;
       height: 48px;
-      border: 1px solid #999;
+      border: 1px solid #bbb;
       border-radius: 999px;
       background: #fff;
       cursor: pointer;
@@ -55,8 +56,8 @@
       top: 0;
       left: 0;
       height: 100%;
-      width: calc(var(--frac, 0) * (100% - 48px) + 24px);
-      background: rgba(153, 153, 153, 0.35);
+      width: calc(var(--frac, 0) * (100% - 40px) + 20px);
+      background: rgba(187, 187, 187, 0.35);
       z-index: 0;
     }
 
@@ -66,11 +67,11 @@
        covered button is the disabled one. */
     .slider-track button {
       position: absolute;
-      top: 0;
-      width: 48px;
-      height: 48px;
+      top: 4px;
+      width: 40px;
+      height: 40px;
       padding: 0;
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       line-height: 1;
       background: transparent;
       border: none;
@@ -93,12 +94,14 @@
 
     .slider-thumb {
       position: absolute;
-      top: 0;
-      left: calc(var(--frac, 0) * (100% - 48px));
-      width: 48px;
-      height: 48px;
+      top: 4px;
+      left: calc(var(--frac, 0) * (100% - 40px));
+      width: 40px;
+      height: 40px;
+      box-sizing: border-box;
       border-radius: 50%;
-      background: linear-gradient(to right, #fff, #999);
+      border: 1px solid #bbb;
+      background: #fff;
       z-index: 2;
     }
 
