@@ -47,6 +47,31 @@
       cursor: default;
     }
 
+    /* Experiment: slider zoom control, fixed at the bottom centre. */
+    .zoom-slider {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      background: #fff;
+      border: 1px solid #000;
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .zoom-slider input {
+      width: 10rem;
+    }
+
+    .zoom-slider span {
+      font-size: 0.9rem;
+      min-width: 2.5rem;
+      text-align: right;
+    }
+
     .timeline-track {
       position: relative;
       /* No shrinking: the track is a flex item of body, and the default
@@ -156,6 +181,12 @@
     <button id="zoom-out" type="button" aria-label="Zoom out">-</button>
   </div>
 
+  <!-- Experiment: slider zoom control. -->
+  <div class="zoom-slider">
+    <input id="zoom-slider" type="range" min="0" max="7" step="1" value="0" aria-label="Zoom level">
+    <span id="zoom-label">1x</span>
+  </div>
+
   <div class="timeline-pad" aria-hidden="true"></div>
   <div class="timeline-track">
     <div class="timeline-line" aria-hidden="true"></div>
@@ -190,25 +221,78 @@
 
     const zoomInButton = document.getElementById('zoom-in');
     const zoomOutButton = document.getElementById('zoom-out');
+    const zoomSlider = document.getElementById('zoom-slider');
+    const zoomLabel = document.getElementById('zoom-label');
 
     function applyZoom() {
       track.style.setProperty('--zoom', zoom);
       zoomInButton.disabled = zoom >= MAX_ZOOM;
       zoomOutButton.disabled = zoom <= MIN_ZOOM;
+      zoomSlider.value = String(Math.log2(zoom));
+      zoomLabel.textContent = `${zoom}x`;
       console.log('Zoom:', `${zoom}x`);
     }
 
-    zoomInButton.addEventListener('click', () => {
-      if (zoom < MAX_ZOOM) {
-        zoom *= 2;
-        applyZoom();
+    function setZoom(newZoom) {
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+      applyZoom();
+    }
+
+    function zoomIn() {
+      setZoom(zoom * 2);
+    }
+
+    function zoomOut() {
+      setZoom(zoom / 2);
+    }
+
+    // Baseline method: + / - buttons.
+    zoomInButton.addEventListener('click', zoomIn);
+    zoomOutButton.addEventListener('click', zoomOut);
+
+    // Experiment: slider, log scale, one step per notch (1x to 128x).
+    zoomSlider.addEventListener('input', () => {
+      setZoom(2 ** Number(zoomSlider.value));
+    });
+
+    // Experiment: scroll up to zoom in, scroll down to zoom out.
+    // A mostly-horizontal swipe is panning, so it is left alone.
+    // Wheel events arrive in small increments on a trackpad, so they
+    // are accumulated until they add up to one step.
+    let wheelAccum = 0;
+    window.addEventListener('wheel', (event) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      wheelAccum += event.deltaY;
+      if (wheelAccum <= -100) {
+        zoomIn();
+        wheelAccum = 0;
+      } else if (wheelAccum >= 100) {
+        zoomOut();
+        wheelAccum = 0;
+      }
+    }, { passive: false });
+
+    // Experiment: keyboard, + / - to zoom, 0 to reset.
+    window.addEventListener('keydown', (event) => {
+      if (event.key === '+' || event.key === '=') {
+        zoomIn();
+      } else if (event.key === '-' || event.key === '_') {
+        zoomOut();
+      } else if (event.key === '0') {
+        setZoom(1);
       }
     });
 
-    zoomOutButton.addEventListener('click', () => {
-      if (zoom > MIN_ZOOM) {
-        zoom /= 2;
-        applyZoom();
+    // Experiment: double-click the timeline to zoom in,
+    // Shift+double-click to zoom out.
+    track.addEventListener('dblclick', (event) => {
+      if (event.shiftKey) {
+        zoomOut();
+      } else {
+        zoomIn();
       }
     });
 
