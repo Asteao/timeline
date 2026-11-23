@@ -226,6 +226,13 @@
       sliderDragging = false;
     });
 
+    // If the browser cancels the drag (e.g. it took the gesture
+    // over as a scroll), stop dragging too, or a later pointer
+    // move over the bar would move the zoom unexpectedly.
+    zoomTrack.addEventListener('pointercancel', () => {
+      sliderDragging = false;
+    });
+
     zoomTrack.addEventListener('keydown', (event) => {
       if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
         event.preventDefault();

@@ -41,6 +41,10 @@
       border-radius: 999px;
       background: #fff;
       cursor: pointer;
+      /* Without this, a touch-drag on the bar is taken over as a
+         page scroll after a few pixels: the browser cancels the
+         pointer stream and the thumb stops following the finger. */
+      touch-action: none;
       overflow: hidden;
     }
 
