@@ -9,7 +9,13 @@
     body {
       margin: 0;
       background: #fff;
+      /* Dynamic viewport height: on mobile Chrome 100vh is the
+         height with the address bar hidden, taller than the
+         visible area while the bar is showing, so the page ends
+         up taller than the screen by the bar's height and can
+         scroll a little. dvh tracks the visible height instead. */
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: safe center;
       justify-content: safe center;
@@ -301,6 +307,7 @@
       .slider-track {
         width: 48px;
         height: 80vh;
+        height: 80dvh;
       }
 
       .slider-fill {
@@ -328,11 +335,13 @@
       .timeline-pad {
         width: 12px;
         height: 10vh;
+        height: 10dvh;
       }
 
       .timeline-track {
         width: 12px;
         height: calc(80vh * var(--zoom, 1));
+        height: calc(80dvh * var(--zoom, 1));
         display: flex;
         justify-content: center;
       }
