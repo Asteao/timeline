@@ -596,7 +596,7 @@
         }
         bar.addEventListener('click', () => zoomToEvent(position(starts[index]) / 100, position(ends[index]) / 100));
         track.appendChild(bar);
-        labelTargets.push({ event, frac: (position(starts[index]) + position(ends[index])) / 2 });
+        labelTargets.push({ event, frac: (position(starts[index]) + position(ends[index])) / 2, startFrac: position(starts[index]) / 100, endFrac: position(ends[index]) / 100 });
       });
 
       events.forEach((event, index) => {
@@ -632,7 +632,7 @@
       const GAP = 4;
       const lanes = [[], []];
 
-      labelTargets.forEach(({ event, frac }) => {
+      labelTargets.forEach(({ event, frac, startFrac, endFrac }) => {
         const label = document.createElement('div');
         label.className = 'event-label';
         label.setAttribute('aria-hidden', 'true');
@@ -649,6 +649,15 @@
         }
         label.style.setProperty('--pos', `${frac}%`);
         track.appendChild(label);
+        // A duration event's label is clickable too, and snaps the
+        // zoom the same way its bar does. Other labels stay
+        // click-through (see .event-label), so they never swallow a
+        // click meant for something beneath them.
+        if (event.end) {
+          label.style.pointerEvents = 'auto';
+          label.style.cursor = 'pointer';
+          label.addEventListener('click', () => zoomToEvent(startFrac, endFrac));
+        }
         const size = landscape ? label.offsetWidth : label.offsetHeight;
         const centre = (frac / 100) * trackLength;
         const interval = [centre - size / 2 - GAP, centre + size / 2 + GAP];
