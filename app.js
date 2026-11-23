@@ -1,0 +1,529 @@
+    // Relative so a branch preview loads its own copy of the timeline
+    // instead of the one on the live site.
+    const TIMELINE_URL = 'timelines/starship-flight-15.json';
+
+    let timeline = null;
+
+    async function fetchTimeline(url) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch timeline: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.schema_version !== 1 || !Array.isArray(data.events)) {
+        throw new Error('Not a timeline file (expected schema_version 1 and an events array).');
+      }
+
+      return data;
+    }
+
+    const track = document.querySelector('.timeline-track');
+
+    // Zoom runs on a 0-127 scale, step 0 showing the whole timeline
+    // (1x) and step 127 the maximum. The scale is geometric: each
+    // unit multiplies the zoom by the same ratio, so the slider feels
+    // even across the whole range. Positions on the scale are
+    // continuous, not just whole steps, so a click can land on the
+    // exact zoom that fits an event, and the slider moves smoothly;
+    // the quick methods still jump 16 units at a time. The maximum
+    // is set from the data when the timeline loads (see
+    // computeMaxZoom); until then it is the old 128x, which is also
+    // the floor, so a sparse timeline never loses range it used to
+    // have.
+    const ZOOM_STEPS = 128;
+    const ZOOM_JUMP = 16;
+    // How much of the viewport a click-to-zoom fit fills: 90%, so
+    // the fitted range lands fully in view with a 5% margin at each
+    // side instead of exactly on the viewport edge.
+    const FIT_FRACTION = 0.9;
+    let maxZoom = 128;
+    let zoomStep = 0;
+    let zoom = 1;
+
+    function zoomForStep(step) {
+      return Math.pow(maxZoom, step / (ZOOM_STEPS - 1));
+    }
+
+    function formatZoom(value) {
+      return `${value >= 100 ? Math.round(value) : value.toFixed(1)}x`;
+    }
+
+    // Events and the fraction along the track their label anchors to:
+    // a dot's position, or a bar's midpoint. Declared here, before
+    // syncZoomUI runs at load, because syncZoomUI now re-lays out
+    // the labels; declaring it next to drawEvents meant the load-time
+    // call hit the variable before it existed and the whole script
+    // died before the timeline loaded.
+    let labelTargets = [];
+
+    // The lanes the on-screen labels ended up in, as intervals
+    // along the track in px. layoutLabels fills this in; the
+    // off-screen labels copy it so they do not overlap an
+    // on-screen label in the lane they take. It holds on-screen
+    // labels only: the off-screen placements go in a throwaway
+    // copy, or their intervals would pile up here on every scroll
+    // and eventually crowd the edge labels out entirely.
+    let placedLanes = [[], []];
+
+    // The gap kept between neighbouring labels in a lane.
+    const LABEL_GAP = 4;
+
+    const zoomInButton = document.getElementById('zoom-in');
+    const zoomOutButton = document.getElementById('zoom-out');
+    const zoomTrack = document.getElementById('zoom-track');
+
+    function syncZoomUI() {
+      zoomInButton.disabled = zoomStep >= ZOOM_STEPS - 1;
+      zoomOutButton.disabled = zoomStep <= 0;
+      zoomTrack.style.setProperty('--frac', String(zoomStep / (ZOOM_STEPS - 1)));
+      zoomTrack.setAttribute('aria-valuenow', String(Math.round(zoomStep)));
+      zoomTrack.setAttribute('aria-valuetext', formatZoom(zoom));
+      console.log('Zoom:', formatZoom(zoom));
+      layoutLabels();
+    }
+
+    // Zoom to a step, keeping the timeline point under `anchor`
+    // (client coordinates) in the same place on screen. Without an
+    // anchor the viewport centre is used, so buttons, slider and
+    // keyboard zoom into the middle. The point's fraction along the
+    // track is measured before the zoom and the page is scrolled
+    // afterwards so that same fraction sits under the anchor again.
+    // window.scrollTo clamps at the ends, so an anchor outside the
+    // track (e.g. over the end padding) drifts slightly instead of
+    // scrolling past the end.
+    function setZoomStep(newStep, anchor = { x: window.innerWidth / 2, y: window.innerHeight / 2 }) {
+      const clamped = Math.min(ZOOM_STEPS - 1, Math.max(0, newStep));
+      if (clamped === zoomStep) {
+        return;
+      }
+
+      const rect = track.getBoundingClientRect();
+      const fx = rect.width ? (anchor.x - rect.left) / rect.width : 0.5;
+      const fy = rect.height ? (anchor.y - rect.top) / rect.height : 0.5;
+
+      zoomStep = clamped;
+      zoom = zoomForStep(zoomStep);
+      track.style.setProperty('--zoom', zoom);
+      syncZoomUI();
+
+      const newRect = track.getBoundingClientRect();
+      const newScrollX = rect.left + window.scrollX - anchor.x + fx * newRect.width;
+      const newScrollY = rect.top + window.scrollY - anchor.y + fy * newRect.height;
+      window.scrollTo(newScrollX, newScrollY);
+    }
+
+    // The quick methods move 16 steps at a time, about 3x at the
+    // Starship range, so eight presses still cross the whole range.
+    function zoomIn(anchor) {
+      setZoomStep(zoomStep + ZOOM_JUMP, anchor);
+    }
+
+    function zoomOut(anchor) {
+      setZoomStep(zoomStep - ZOOM_JUMP, anchor);
+    }
+
+    // Snap the zoom and scroll so a time range spans the page: the
+    // exact zoom at which the range fills 90% of the viewport, with
+    // the range centred, so the fitted event lands fully in view
+    // with a margin at each side instead of exactly on the
+    // viewport edge. The scale is continuous, so this is the
+    // precise fit rather than the nearest step. Clicking a duration
+    // event's bar or label fits the event itself; clicking an
+    // off-screen label fits the union of the visible range and the
+    // event, so what is already on screen stays in view.
+    function zoomToRange(startFrac, endFrac) {
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const span = endFrac - startFrac;
+      const exactFit = FIT_FRACTION / (0.8 * span);
+      const step = Math.min(ZOOM_STEPS - 1, Math.max(0, Math.log(exactFit) / Math.log(zoomForStep(1))));
+      setZoomStep(step);
+
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      const mid = ((startFrac + endFrac) / 2) * trackLength;
+      if (landscape) {
+        window.scrollTo(rect.left + window.scrollX + mid - window.innerWidth / 2, window.scrollY);
+      } else {
+        window.scrollTo(window.scrollX, rect.top + window.scrollY + mid - window.innerHeight / 2);
+      }
+    }
+
+    // The maximum zoom is set from the data: far enough that the two
+    // closest event boundaries (starts and ends) sit 100px apart, so
+    // the densest cluster can be pulled apart far enough to read.
+    // Coincident boundaries (zero gap) can never be separated by
+    // zooming, so they are ignored. The old 128x is the floor.
+    function computeMaxZoom(events) {
+      const times = [];
+      for (const event of events) {
+        times.push(Date.parse(event.start.at));
+        if (event.end) {
+          times.push(Date.parse(event.end.at));
+        }
+      }
+      times.sort((a, b) => a - b);
+      let minGap = Infinity;
+      for (let i = 1; i < times.length; i++) {
+        const gap = times[i] - times[i - 1];
+        if (gap > 0 && gap < minGap) {
+          minGap = gap;
+        }
+      }
+      const range = times[times.length - 1] - times[0];
+      if (!Number.isFinite(minGap) || range <= 0) {
+        return;
+      }
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const trackLength = landscape ? track.offsetWidth : track.offsetHeight;
+      const needed = 100 / ((minGap / range) * trackLength);
+      maxZoom = Math.max(128, needed);
+      zoom = zoomForStep(zoomStep);
+      track.style.setProperty('--zoom', zoom);
+      console.log('Max zoom:', formatZoom(maxZoom), `(closest events ${minGap / 1000}s apart)`);
+      syncZoomUI();
+    }
+
+    // Baseline method: + / - buttons, now inside the slider bar.
+    // Their pointerdown must not reach the slider track, or pressing
+    // - would jump the zoom to 1x instead of stepping down one level.
+    zoomInButton.addEventListener('click', () => zoomIn());
+    zoomOutButton.addEventListener('click', () => zoomOut());
+    for (const button of [zoomInButton, zoomOutButton]) {
+      button.addEventListener('pointerdown', (event) => event.stopPropagation());
+    }
+
+    // Custom slider, log scale (1x to max zoom). Click or drag on
+    // the bar to set the zoom; arrow keys move a single unit when
+    // the bar has focus.
+    function sliderStepFromEvent(event) {
+      const rect = zoomTrack.getBoundingClientRect();
+      const frac = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      return frac * (ZOOM_STEPS - 1);
+    }
+
+    let sliderDragging = false;
+
+    zoomTrack.addEventListener('pointerdown', (event) => {
+      sliderDragging = true;
+      zoomTrack.setPointerCapture(event.pointerId);
+      setZoomStep(sliderStepFromEvent(event));
+    });
+
+    zoomTrack.addEventListener('pointermove', (event) => {
+      if (sliderDragging) {
+        setZoomStep(sliderStepFromEvent(event));
+      }
+    });
+
+    zoomTrack.addEventListener('pointerup', () => {
+      sliderDragging = false;
+    });
+
+    zoomTrack.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        setZoomStep(zoomStep + 1);
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        setZoomStep(zoomStep - 1);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setZoomStep(0);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        setZoomStep(ZOOM_STEPS - 1);
+      }
+    });
+
+    // Scroll up to zoom in, scroll down to zoom out.
+    // A mostly-horizontal swipe is panning, so it is left alone.
+    // Wheel events arrive in small increments on a trackpad, so they
+    // are accumulated until they add up to one jump (16 steps).
+    let wheelAccum = 0;
+    window.addEventListener('wheel', (event) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      wheelAccum += event.deltaY;
+      const anchor = { x: event.clientX, y: event.clientY };
+      if (wheelAccum <= -100) {
+        zoomIn(anchor);
+        wheelAccum = 0;
+      } else if (wheelAccum >= 100) {
+        zoomOut(anchor);
+        wheelAccum = 0;
+      }
+    }, { passive: false });
+
+    // Keyboard: + / - to zoom by a jump, 0 to reset.
+    window.addEventListener('keydown', (event) => {
+      if (event.key === '+' || event.key === '=') {
+        zoomIn();
+      } else if (event.key === '-' || event.key === '_') {
+        zoomOut();
+      } else if (event.key === '0') {
+        setZoomStep(0);
+      }
+    });
+
+    // Double-click the timeline to zoom in by a jump,
+    // Shift+double-click to zoom out.
+    track.addEventListener('dblclick', (event) => {
+      const anchor = { x: event.clientX, y: event.clientY };
+      if (event.shiftKey) {
+        zoomOut(anchor);
+      } else {
+        zoomIn(anchor);
+      }
+    });
+
+    track.style.setProperty('--zoom', zoom);
+    syncZoomUI();
+
+    function drawEvents(events) {
+      const starts = events.map((event) => Date.parse(event.start.at));
+      const ends = events.map((event) => (event.end ? Date.parse(event.end.at) : null));
+      const start = Math.min(...starts);
+      const end = Math.max(...starts, ...ends.filter((time) => time !== null));
+      const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
+      labelTargets = [];
+
+      // Bars first, so dots render on top of them. The bars are
+      // appended longest first, so a short bar is never hidden
+      // underneath a longer one it overlaps: the booster flight bar
+      // sits inside the ship flight bar's span, and used to disappear
+      // under it, which also made its label look detached from the
+      // visible blue. Labels keep file order below, so this does not
+      // change which labels win a lane.
+      const bars = [];
+      events.forEach((event, index) => {
+        if (!event.end) {
+          return;
+        }
+        const bar = document.createElement('div');
+        bar.className = 'event-bar';
+        bar.setAttribute('aria-hidden', 'true');
+        bar.style.setProperty('--pos', `${position(starts[index])}%`);
+        bar.style.setProperty('--end-pos', `${position(ends[index])}%`);
+        if (event.style && event.style.color) {
+          bar.style.background = event.style.color;
+        }
+        bar.addEventListener('click', () => zoomToRange(position(starts[index]) / 100, position(ends[index]) / 100));
+        bars.push({ bar, span: ends[index] - starts[index] });
+        labelTargets.push({ event, frac: (position(starts[index]) + position(ends[index])) / 2, startFrac: position(starts[index]) / 100, endFrac: position(ends[index]) / 100 });
+      });
+      bars.sort((a, b) => b.span - a.span).forEach(({ bar }) => track.appendChild(bar));
+
+      events.forEach((event, index) => {
+        if (event.end) {
+          return;
+        }
+        const dot = document.createElement('div');
+        dot.className = 'event-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        dot.style.setProperty('--pos', `${position(starts[index])}%`);
+        if (event.style && event.style.color) {
+          dot.style.background = event.style.color;
+        }
+        track.appendChild(dot);
+        labelTargets.push({ event, frac: position(starts[index]) });
+      });
+    }
+
+    // Labels: one small box per event, title plus the first few words
+    // of its description, floating above or below the line. There is
+    // only room for some of them, so each label is placed greedily in
+    // time order into the first of two lanes (above, then below) where
+    // it fits without overlapping a label already there; the rest are
+    // suppressed. Placement depends on pixel widths, so it is redone
+    // whenever the zoom or the window size changes.
+    // One label box for an event: title plus the first few words
+    // of its description, with a border in the event's colour.
+    // Events without a colour keep the default grey border.
+    function makeLabel(event) {
+      const label = document.createElement('div');
+      label.className = 'event-label';
+      label.setAttribute('aria-hidden', 'true');
+      const title = document.createElement('div');
+      title.className = 'event-label-title';
+      title.textContent = event.title;
+      label.appendChild(title);
+      if (event.description) {
+        const words = event.description.split(/\s+/);
+        const excerpt = document.createElement('div');
+        excerpt.className = 'event-label-excerpt';
+        excerpt.textContent = words.slice(0, 8).join(' ') + (words.length > 8 ? '…' : '');
+        label.appendChild(excerpt);
+      }
+      if (event.style && event.style.color) {
+        label.style.borderColor = event.style.color;
+      }
+      return label;
+    }
+
+    function layoutLabels() {
+      track.querySelectorAll('.event-label').forEach((label) => label.remove());
+      if (!labelTargets.length) {
+        return;
+      }
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const trackLength = landscape ? track.offsetWidth : track.offsetHeight;
+      const lanes = [[], []];
+
+      labelTargets.forEach(({ event, frac, startFrac, endFrac }) => {
+        const label = makeLabel(event);
+        label.style.setProperty('--pos', `${frac}%`);
+        track.appendChild(label);
+        // A duration event's label is clickable too, and snaps the
+        // zoom the same way its bar does. Other labels stay
+        // click-through (see .event-label), so they never swallow a
+        // click meant for something beneath them.
+        if (event.end) {
+          label.style.pointerEvents = 'auto';
+          label.style.cursor = 'pointer';
+          label.addEventListener('click', () => zoomToRange(startFrac, endFrac));
+        }
+        const size = landscape ? label.offsetWidth : label.offsetHeight;
+        const centre = (frac / 100) * trackLength;
+        const interval = [centre - size / 2 - LABEL_GAP, centre + size / 2 + LABEL_GAP];
+        const lane = lanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
+        if (lane === -1) {
+          label.remove();
+          return;
+        }
+        lanes[lane].push(interval);
+        label.classList.add(lane === 0 ? 'label-above' : 'label-below');
+      });
+      placedLanes = lanes;
+      updateOffscreenLabels();
+    }
+
+    // The fraction of the timeline currently on screen, clamped
+    // to the timeline itself (the end padding shows no events).
+    function visibleFracRange() {
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      if (!trackLength) {
+        return [0, 1];
+      }
+      const scroll = landscape ? window.scrollX : window.scrollY;
+      const viewport = landscape ? window.innerWidth : window.innerHeight;
+      const trackStart = (landscape ? rect.left : rect.top) + scroll;
+      const start = Math.min(1, Math.max(0, (scroll - trackStart) / trackLength));
+      const end = Math.min(1, Math.max(0, (scroll + viewport - trackStart) / trackLength));
+      return [start, end];
+    }
+
+    // Labels for the closest events off screen: at most one pinned
+    // at each edge of the viewport, so a zoomed-in stretch of empty
+    // timeline still shows what lies beyond it in each direction.
+    // An off-screen label is an ordinary label box for the event,
+    // with a chevron pointing at the edge its event lies beyond; it
+    // takes the first lane where it fits without overlapping an
+    // on-screen label, and is suppressed if neither lane has room.
+    // Clicking it zooms out just enough that the events already on
+    // screen stay in view and this event comes into view too.
+    function updateOffscreenLabels() {
+      track.querySelectorAll('.offscreen-label').forEach((label) => label.remove());
+      if (!labelTargets.length) {
+        return;
+      }
+      const [visStart, visEnd] = visibleFracRange();
+      let before = null;
+      let after = null;
+      for (const target of labelTargets) {
+        const frac = target.frac / 100;
+        if (frac < visStart && (!before || frac > before.frac / 100)) {
+          before = target;
+        } else if (frac > visEnd && (!after || frac < after.frac / 100)) {
+          after = target;
+        }
+      }
+      // A fresh copy of the on-screen lanes for this placement
+      // round, so the two edge labels do not overlap each other
+      // but their intervals are forgotten afterwards.
+      const lanes = placedLanes.map((lane) => [...lane]);
+      placeOffscreenLabel(before, -1, lanes);
+      placeOffscreenLabel(after, 1, lanes);
+    }
+
+    function placeOffscreenLabel(target, direction, lanes) {
+      if (!target) {
+        return;
+      }
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      if (!trackLength) {
+        return;
+      }
+      const scroll = landscape ? window.scrollX : window.scrollY;
+      const viewport = landscape ? window.innerWidth : window.innerHeight;
+      const trackStart = (landscape ? rect.left : rect.top) + scroll;
+      const label = makeLabel(target.event);
+      label.classList.add('offscreen-label', direction < 0 ? 'offscreen-before' : 'offscreen-after');
+      label.style.pointerEvents = 'auto';
+      label.style.cursor = 'pointer';
+      label.addEventListener('click', () => {
+        const [visStart, visEnd] = visibleFracRange();
+        const startFrac = target.startFrac ?? target.frac / 100;
+        const endFrac = target.endFrac ?? target.frac / 100;
+        zoomToRange(Math.min(visStart, startFrac), Math.max(visEnd, endFrac));
+      });
+      track.appendChild(label);
+      // Position it at the viewport edge: measure its size first,
+      // then set --pos so its outer edge sits a small gap inside
+      // the viewport. In portrait the bottom edge clears the fixed
+      // zoom slider (48px tall, 1rem from the bottom).
+      const size = landscape ? label.offsetWidth : label.offsetHeight;
+      const edgeGap = !landscape && direction > 0 ? 72 : 8;
+      const edgePx = direction < 0
+        ? scroll + edgeGap + size / 2
+        : scroll + viewport - edgeGap - size / 2;
+      const centre = edgePx - trackStart;
+      label.style.setProperty('--pos', `${(centre / trackLength) * 100}%`);
+      const interval = [centre - size / 2 - LABEL_GAP, centre + size / 2 + LABEL_GAP];
+      const lane = lanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
+      if (lane === -1) {
+        label.remove();
+        return;
+      }
+      lanes[lane].push(interval);
+      label.classList.add(lane === 0 ? 'label-above' : 'label-below');
+    }
+
+    window.addEventListener('resize', () => layoutLabels());
+
+    // Scrolling moves the viewport along the timeline, so the
+    // closest off-screen events change; re-place their labels as
+    // the user scrolls. Only the off-screen labels move — the
+    // on-screen ones are positioned along the track, so their
+    // layout is unaffected.
+    let offscreenRaf = 0;
+    window.addEventListener('scroll', () => {
+      if (offscreenRaf) {
+        return;
+      }
+      offscreenRaf = requestAnimationFrame(() => {
+        offscreenRaf = 0;
+        updateOffscreenLabels();
+      });
+    }, { passive: true });
+
+    console.log('Loading timeline…');
+
+    fetchTimeline(TIMELINE_URL)
+      .then((data) => {
+        timeline = data;
+        console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
+        drawEvents(data.events);
+        computeMaxZoom(data.events);
+        layoutLabels();
+      })
+      .catch((error) => {
+        console.error('Could not load timeline:', error);
+      });

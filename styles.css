@@ -1,0 +1,359 @@
+    /* No overscroll navigation: without this, scrolling past the left
+       end of the timeline on a Mac trackpad makes Chrome swipe back
+       to the previous page. */
+    html,
+    body {
+      overscroll-behavior: none;
+    }
+
+    body {
+      margin: 0;
+      background: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: safe center;
+      justify-content: safe center;
+      overflow: auto;
+    }
+
+    /* Custom slider zoom control, fixed at the bottom centre.
+       No range input: the bar is a div, thick and rounded at both ends,
+       outlined with a thin light-grey line. The value indicator is a
+       thin white circle, the same size as the bar, with a thin
+       light-grey outline, and the part of the bar behind it fills with
+       semi-transparent light grey as the slider moves.
+       --frac (0 to 1) positions both. */
+    .zoom-slider {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .slider-track {
+      position: relative;
+      width: 80vw;
+      height: 48px;
+      border: 1px solid #bbb;
+      border-radius: 999px;
+      background: #fff;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .slider-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: calc(var(--frac, 0) * (100% - 48px) + 24px);
+      background: rgba(187, 187, 187, 0.35);
+      z-index: 0;
+    }
+
+    /* + / - buttons inside the bar, one at each end. They sit above
+       the fill and below the thumb, so at 1x the thumb covers the -
+       button (and at 128x it covers the + button) — in both cases the
+       covered button is the disabled one. */
+    .slider-track button {
+      position: absolute;
+      top: 0;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      font-size: 1.5rem;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .slider-track button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #zoom-out {
+      left: 0;
+    }
+
+    #zoom-in {
+      right: 0;
+    }
+
+    .slider-thumb {
+      position: absolute;
+      top: 0;
+      left: calc(var(--frac, 0) * (100% - 48px));
+      width: 48px;
+      height: 48px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      border: 1px solid #bbb;
+      background: #fff;
+      z-index: 2;
+    }
+
+    .timeline-track {
+      position: relative;
+      /* No shrinking: the track is a flex item of body, and the default
+         flex-shrink: 1 squeezed a zoomed track back to the viewport width,
+         so zoom past the first step had no visible effect. */
+      flex: 0 0 auto;
+    }
+
+    /* Fixed padding at both ends of the timeline, in viewport units so
+       it does not grow with zoom. These are real elements, not margins:
+       a trailing margin is dropped from the scrollable area, so the
+       far end used to sit flush against the screen edge when zoomed in.
+       At 1x the pads (10vw each) plus the track (80%) are exactly the
+       viewport width, so the 1x look is unchanged. */
+    .timeline-pad {
+      flex: 0 0 auto;
+    }
+
+    .timeline-line {
+      background: #000;
+    }
+
+    .event-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #000;
+      /* Dots render on top of bars but are not interactive, so clicks
+         pass through to the bar beneath instead of landing on a dot
+         and doing nothing. */
+      pointer-events: none;
+    }
+
+    .event-dot::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+    }
+
+    /* An event with an end is a dot stretched into a bar: same 12px
+       thickness and black fill, with the white centre stretched into
+       a stripe. Bars are drawn first, so dots render on top of them. */
+    .event-bar {
+      position: absolute;
+      border-radius: 999px;
+      background: #000;
+      cursor: pointer;
+    }
+
+    .event-bar::after {
+      content: '';
+      position: absolute;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    /* Labels for events: a small box floating above or below the line
+       (left or right of it in portrait), with the event title and the
+       first few words of its description. A short stem joins the box
+       to its dot or bar. Labels are placed only where they fit; see
+       layoutLabels. */
+    .event-label {
+      position: absolute;
+      max-width: 180px;
+      padding: 4px 8px;
+      background: #fff;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.35;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .event-label::after {
+      content: '';
+      position: absolute;
+      background: #bbb;
+    }
+
+    .event-label-title {
+      font-weight: 600;
+    }
+
+    .event-label-excerpt {
+      color: #555;
+    }
+
+    /* Wider than tall: horizontal line, dots and bars positioned left to right. */
+    @media (orientation: landscape) {
+      body {
+        flex-direction: row;
+      }
+
+      .timeline-pad {
+        width: 10vw;
+        height: 12px;
+      }
+
+      .timeline-track {
+        width: calc(80% * var(--zoom, 1));
+        height: 12px;
+        display: flex;
+        align-items: center;
+      }
+
+      .timeline-line {
+        width: 100%;
+        height: 2px;
+      }
+
+      .event-dot {
+        left: var(--pos);
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .event-bar {
+        left: var(--pos);
+        width: calc(var(--end-pos) - var(--pos));
+        height: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .event-bar::after {
+        height: 6px;
+        left: 6px;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .event-label {
+        left: var(--pos);
+        transform: translateX(-50%);
+      }
+
+      /* An off-screen label points at the edge its event lies
+         beyond, so it is not mistaken for an event at the edge. */
+      .event-label.offscreen-before .event-label-title::before {
+        content: '‹ ';
+      }
+
+      .event-label.offscreen-after .event-label-title::after {
+        content: ' ›';
+      }
+
+      .event-label.label-above {
+        bottom: calc(100% + 8px);
+      }
+
+      .event-label.label-above::after {
+        left: 50%;
+        top: 100%;
+        width: 1px;
+        height: 8px;
+      }
+
+      .event-label.label-below {
+        top: calc(100% + 8px);
+      }
+
+      .event-label.label-below::after {
+        left: 50%;
+        bottom: 100%;
+        width: 1px;
+        height: 8px;
+      }
+    }
+
+    /* Taller than wide: vertical line, dots and bars positioned top to bottom. */
+    @media (orientation: portrait) {
+      body {
+        flex-direction: column;
+      }
+
+      .timeline-pad {
+        width: 12px;
+        height: 10vh;
+      }
+
+      .timeline-track {
+        width: 12px;
+        height: calc(80vh * var(--zoom, 1));
+        display: flex;
+        justify-content: center;
+      }
+
+      .timeline-line {
+        width: 2px;
+        height: 100%;
+      }
+
+      .event-dot {
+        top: var(--pos);
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .event-bar {
+        top: var(--pos);
+        height: calc(var(--end-pos) - var(--pos));
+        width: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .event-bar::after {
+        width: 6px;
+        top: 6px;
+        bottom: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      /* Above/below the line means left/right of it here. */
+      .event-label {
+        top: var(--pos);
+        transform: translateY(-50%);
+      }
+
+      .event-label.offscreen-before .event-label-title::before {
+        content: '∧ ';
+      }
+
+      .event-label.offscreen-after .event-label-title::after {
+        content: ' ∨';
+      }
+
+      .event-label.label-above {
+        right: calc(100% + 8px);
+      }
+
+      .event-label.label-above::after {
+        top: 50%;
+        left: 100%;
+        width: 8px;
+        height: 1px;
+      }
+
+      .event-label.label-below {
+        left: calc(100% + 8px);
+      }
+
+      .event-label.label-below::after {
+        top: 50%;
+        right: 100%;
+        width: 8px;
+        height: 1px;
+      }
+    }
