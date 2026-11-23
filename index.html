@@ -23,7 +23,7 @@
       overflow: auto;
     }
 
-    /* Experiment: custom slider zoom control, fixed at the bottom centre.
+    /* Custom slider zoom control, fixed at the bottom centre.
        No range input: the bar is a div, thick and rounded at both ends,
        outlined with a thin light-grey line. The value indicator is a
        thin white circle, the same size as the bar, with a thin
@@ -209,7 +209,7 @@
   </style>
 </head>
 <body>
-  <!-- Experiment: custom slider zoom control, with the + / - buttons
+  <!-- Custom slider zoom control, with the + / - buttons
        inside the bar at each end. -->
   <div class="zoom-slider">
     <div class="slider-track" id="zoom-track" role="slider" tabindex="0" aria-label="Zoom level" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0" aria-valuetext="1x">
@@ -312,7 +312,7 @@
       button.addEventListener('pointerdown', (event) => event.stopPropagation());
     }
 
-    // Experiment: custom slider, log scale, one step per notch (1x to 128x).
+    // Custom slider, log scale, one step per notch (1x to 128x).
     // Click or drag on the bar to set the zoom; arrow keys work when
     // the bar has focus.
     function sliderStepFromEvent(event) {
@@ -355,7 +355,7 @@
       }
     });
 
-    // Experiment: scroll up to zoom in, scroll down to zoom out.
+    // Scroll up to zoom in, scroll down to zoom out.
     // A mostly-horizontal swipe is panning, so it is left alone.
     // Wheel events arrive in small increments on a trackpad, so they
     // are accumulated until they add up to one step.
@@ -376,7 +376,7 @@
       }
     }, { passive: false });
 
-    // Experiment: keyboard, + / - to zoom, 0 to reset.
+    // Keyboard: + / - to zoom, 0 to reset.
     window.addEventListener('keydown', (event) => {
       if (event.key === '+' || event.key === '=') {
         zoomIn();
@@ -387,7 +387,7 @@
       }
     });
 
-    // Experiment: double-click the timeline to zoom in,
+    // Double-click the timeline to zoom in,
     // Shift+double-click to zoom out.
     track.addEventListener('dblclick', (event) => {
       const anchor = { x: event.clientX, y: event.clientY };
