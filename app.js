@@ -196,10 +196,15 @@
 
     // Custom slider, log scale (1x to max zoom). Click or drag on
     // the bar to set the zoom; arrow keys move a single unit when
-    // the bar has focus.
+    // the bar has focus. In portrait the bar runs vertically, so
+    // the fraction is measured from the top: the top is the
+    // maximum zoom and the bottom is 1x.
     function sliderStepFromEvent(event) {
       const rect = zoomTrack.getBoundingClientRect();
-      const frac = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const frac = landscape
+        ? Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
+        : Math.min(1, Math.max(0, 1 - (event.clientY - rect.top) / rect.height));
       return frac * (ZOOM_STEPS - 1);
     }
 
@@ -477,10 +482,9 @@
       track.appendChild(label);
       // Position it at the viewport edge: measure its size first,
       // then set --pos so its outer edge sits a small gap inside
-      // the viewport. In portrait the bottom edge clears the fixed
-      // zoom slider (48px tall, 1rem from the bottom).
+      // the viewport.
       const size = landscape ? label.offsetWidth : label.offsetHeight;
-      const edgeGap = !landscape && direction > 0 ? 72 : 8;
+      const edgeGap = 8;
       const edgePx = direction < 0
         ? scroll + edgeGap + size / 2
         : scroll + viewport - edgeGap - size / 2;

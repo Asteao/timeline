@@ -282,6 +282,45 @@
         flex-direction: column;
       }
 
+      /* In portrait the zoom slider moves to the right side and
+         runs vertically: the bar is tall and narrow, the thumb
+         travels top to bottom, + at the top and - at the bottom,
+         so the top of the bar is the maximum zoom. */
+      .zoom-slider {
+        bottom: auto;
+        left: auto;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .slider-track {
+        width: 48px;
+        height: 80vh;
+      }
+
+      .slider-fill {
+        top: auto;
+        bottom: 0;
+        width: 100%;
+        height: calc(var(--frac, 0) * (100% - 48px) + 24px);
+      }
+
+      #zoom-out {
+        top: auto;
+        bottom: 0;
+      }
+
+      #zoom-in {
+        right: auto;
+        left: 0;
+      }
+
+      .slider-thumb {
+        top: calc((1 - var(--frac, 0)) * (100% - 48px));
+        left: 0;
+      }
+
       .timeline-pad {
         width: 12px;
         height: 10vh;
