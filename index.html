@@ -716,6 +716,12 @@
           label.appendChild(excerpt);
         }
         label.style.setProperty('--pos', `${frac}%`);
+        // The label's border matches its event's colour, so a label
+        // is visibly tied to the dot or bar it names. Events without
+        // a colour keep the default grey border.
+        if (event.style && event.style.color) {
+          label.style.borderColor = event.style.color;
+        }
         track.appendChild(label);
         // A duration event's label is clickable too, and snaps the
         // zoom the same way its bar does. Other labels stay
