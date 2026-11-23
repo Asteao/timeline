@@ -468,6 +468,9 @@
         bar.setAttribute('aria-hidden', 'true');
         bar.style.setProperty('--pos', `${position(starts[index])}%`);
         bar.style.setProperty('--end-pos', `${position(ends[index])}%`);
+        if (event.style && event.style.color) {
+          bar.style.background = event.style.color;
+        }
         track.appendChild(bar);
       });
 
@@ -479,6 +482,9 @@
         dot.className = 'event-dot';
         dot.setAttribute('aria-hidden', 'true');
         dot.style.setProperty('--pos', `${position(starts[index])}%`);
+        if (event.style && event.style.color) {
+          dot.style.background = event.style.color;
+        }
         track.appendChild(dot);
       });
     }
