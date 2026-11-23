@@ -2,9 +2,11 @@
 
 A minimal format for events and timelines — from a single event unfolding, to a whole life, to all of human history.
 
-**Version:** 0.1 (locked)
+**Version:** 0.2
 **Schema version:** 1
-**Date:** 17 November 2026
+**Date:** 23 November 2026
+
+Version 0.2 adds one optional field, `style`, on events (section 4). The schema version stays 1: adding an optional field does not change the meaning of any existing field.
 
 ## 1. Purpose and scope
 
@@ -22,7 +24,7 @@ The format is plain JSON. One timeline is stored in one file.
 
 1. **Minimal by default.** An event requires only three fields: `id`, `title`, and `start`. Every other field is optional and must earn its place.
 2. **Time is structured, everything else is text.** Dates are never free-form strings. Titles, descriptions, and labels are plain text.
-3. **No presentation in the data.** The data contains no colour, position, lane, zoom level, or visibility flag. A viewer derives all of that.
+3. **Almost no presentation in the data.** The data contains no position, lane, zoom level, or visibility flag. The one exception is an event's optional `style` (section 4), a colour hint a viewer may use; without it, the viewer's default applies. A viewer derives everything else.
 4. **Flat events, composable timelines.** Events do not contain other events. Larger subjects are handled by linking one timeline from an event in another (section 6).
 5. **Forward compatible.** Readers must ignore fields they do not recognise, so a version 2 file does not break a version 1 reader.
 6. **One rule for every scale.** If a field is only needed by one of the three uses above, it does not belong in version 1.
@@ -55,6 +57,7 @@ An event is one thing that happened, with a time span. A span with no end is an 
 | `description` | string | No | Plain text. No markup in version 1. |
 | `category` | string | No | One category id from the timeline's `categories`. |
 | `tags` | string array | No | Free-form labels for filtering. |
+| `style` | object | No | Presentation hint, e.g. `{ "color": "#E69F00" }`. A viewer renders the event in that colour; without `style`, the viewer's default applies. For now `color` is the only key, and its value is a CSS colour. |
 | `detail_timeline_id` | string or null | No | Another timeline that expands this event. See section 6. |
 | `sources` | array | No | Citations for the event, each `{ label, url }`. See section 7. |
 | `extensions` | object | No | Escape hatch for experimental fields. Readers ignore it. |
@@ -220,5 +223,5 @@ Each of the following was considered and left out. None will be added until at l
 - **Location** — no coordinates or place objects.
 - **People** — no structured participants; names belong in titles and descriptions for now.
 - **Recurrence** — no repeating events.
-- **Presentation** — no colour, icon, lane, or ordering hints in the data.
+- **Presentation** — no icon, lane, or ordering hints in the data. (Colour was excluded here in 0.1 and adopted as an optional `style` hint in 0.2; see section 4.)
 - **Rich text** — descriptions are plain text only.

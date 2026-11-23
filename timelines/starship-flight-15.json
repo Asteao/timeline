@@ -30,6 +30,7 @@
         "precision": "second"
       },
       "category": "phase",
+      "style": { "color": "#E69F00" },
       "sources": [
         {
           "label": "SpaceX \u2014 Starship Flight 15",
@@ -244,6 +245,7 @@
         "precision": "second"
       },
       "category": "phase",
+      "style": { "color": "#0072B2" },
       "sources": [
         {
           "label": "SpaceX \u2014 Starship Flight 15",
@@ -308,6 +310,7 @@
         "precision": "second"
       },
       "category": "phase",
+      "style": { "color": "#009E73" },
       "sources": [
         {
           "label": "SpaceX \u2014 Starship Flight 15",
