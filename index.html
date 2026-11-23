@@ -641,7 +641,14 @@
       const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
       labelTargets = [];
 
-      // Bars first, so dots render on top of them.
+      // Bars first, so dots render on top of them. The bars are
+      // appended longest first, so a short bar is never hidden
+      // underneath a longer one it overlaps: the booster flight bar
+      // sits inside the ship flight bar's span, and used to disappear
+      // under it, which also made its label look detached from the
+      // visible blue. Labels keep file order below, so this does not
+      // change which labels win a lane.
+      const bars = [];
       events.forEach((event, index) => {
         if (!event.end) {
           return;
@@ -655,9 +662,10 @@
           bar.style.background = event.style.color;
         }
         bar.addEventListener('click', () => zoomToEvent(position(starts[index]) / 100, position(ends[index]) / 100));
-        track.appendChild(bar);
+        bars.push({ bar, span: ends[index] - starts[index] });
         labelTargets.push({ event, frac: (position(starts[index]) + position(ends[index])) / 2, startFrac: position(starts[index]) / 100, endFrac: position(ends[index]) / 100 });
       });
+      bars.sort((a, b) => b.span - a.span).forEach(({ bar }) => track.appendChild(bar));
 
       events.forEach((event, index) => {
         if (event.end) {
