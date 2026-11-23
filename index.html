@@ -147,7 +147,23 @@
       transform: translate(-50%, -50%);
     }
 
-    /* Wider than tall: horizontal line, dots positioned left to right. */
+    /* An event with an end is a dot stretched into a bar: same 12px
+       thickness and black fill, with the white centre stretched into
+       a stripe. Bars are drawn first, so dots render on top of them. */
+    .event-bar {
+      position: absolute;
+      border-radius: 999px;
+      background: #000;
+    }
+
+    .event-bar::after {
+      content: '';
+      position: absolute;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    /* Wider than tall: horizontal line, dots and bars positioned left to right. */
     @media (orientation: landscape) {
       body {
         flex-direction: row;
@@ -175,9 +191,25 @@
         top: 50%;
         transform: translate(-50%, -50%);
       }
+
+      .event-bar {
+        left: var(--pos);
+        width: calc(var(--end-pos) - var(--pos));
+        height: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .event-bar::after {
+        height: 6px;
+        left: 6px;
+        right: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
     }
 
-    /* Taller than wide: vertical line, dots positioned top to bottom. */
+    /* Taller than wide: vertical line, dots and bars positioned top to bottom. */
     @media (orientation: portrait) {
       body {
         flex-direction: column;
@@ -205,6 +237,22 @@
         left: 50%;
         transform: translate(-50%, -50%);
       }
+
+      .event-bar {
+        top: var(--pos);
+        height: calc(var(--end-pos) - var(--pos));
+        width: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .event-bar::after {
+        width: 6px;
+        top: 6px;
+        bottom: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
     }
   </style>
 </head>
@@ -227,7 +275,9 @@
   <div class="timeline-pad" aria-hidden="true"></div>
 
   <script>
-    const TIMELINE_URL = 'https://timeline.asteao.net/timelines/starship-flight-15.json';
+    // Relative so a branch preview loads its own copy of the timeline
+    // instead of the one on the live site.
+    const TIMELINE_URL = 'timelines/starship-flight-15.json';
 
     let timeline = null;
 
@@ -401,17 +451,40 @@
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
 
-    function drawDots(events) {
-      const times = events.map((event) => Date.parse(event.start.at));
-      const start = Math.min(...times);
-      const end = Math.max(...times);
+    function drawEvents(events) {
+      const starts = events.map((event) => Date.parse(event.start.at));
+      const ends = events.map((event) => (event.end ? Date.parse(event.end.at) : null));
+      const start = Math.min(...starts);
+      const end = Math.max(...starts, ...ends.filter((time) => time !== null));
+      const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
+
+      // Bars first, so dots render on top of them.
+      events.forEach((event, index) => {
+        if (!event.end) {
+          return;
+        }
+        const bar = document.createElement('div');
+        bar.className = 'event-bar';
+        bar.setAttribute('aria-hidden', 'true');
+        bar.style.setProperty('--pos', `${position(starts[index])}%`);
+        bar.style.setProperty('--end-pos', `${position(ends[index])}%`);
+        if (event.style && event.style.color) {
+          bar.style.background = event.style.color;
+        }
+        track.appendChild(bar);
+      });
 
       events.forEach((event, index) => {
+        if (event.end) {
+          return;
+        }
         const dot = document.createElement('div');
         dot.className = 'event-dot';
         dot.setAttribute('aria-hidden', 'true');
-        const position = end === start ? 50 : ((times[index] - start) / (end - start)) * 100;
-        dot.style.setProperty('--pos', `${position}%`);
+        dot.style.setProperty('--pos', `${position(starts[index])}%`);
+        if (event.style && event.style.color) {
+          dot.style.background = event.style.color;
+        }
         track.appendChild(dot);
       });
     }
@@ -422,7 +495,7 @@
       .then((data) => {
         timeline = data;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
-        drawDots(data.events);
+        drawEvents(data.events);
       })
       .catch((error) => {
         console.error('Could not load timeline:', error);

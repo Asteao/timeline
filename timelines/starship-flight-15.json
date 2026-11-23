@@ -11,9 +11,33 @@
     {
       "id": "flight",
       "label": "Flight"
+    },
+    {
+      "id": "phase",
+      "label": "Phase"
     }
   ],
   "events": [
+    {
+      "id": "pre-launch",
+      "title": "Pre-launch",
+      "start": {
+        "at": "2026-11-13T21:57:36Z",
+        "precision": "second"
+      },
+      "end": {
+        "at": "2026-11-13T22:47:36Z",
+        "precision": "second"
+      },
+      "category": "phase",
+      "style": { "color": "#E69F00" },
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
     {
       "id": "flight-director-poll-go-propellant-load",
       "title": "SpaceX Flight Director conducts poll and verifies GO for propellant load",
@@ -210,6 +234,26 @@
       ]
     },
     {
+      "id": "booster-flight",
+      "title": "Booster flight",
+      "start": {
+        "at": "2026-11-13T22:47:36Z",
+        "precision": "second"
+      },
+      "end": {
+        "at": "2026-11-13T22:54:11Z",
+        "precision": "second"
+      },
+      "category": "phase",
+      "style": { "color": "#0072B2" },
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
       "id": "max-q",
       "title": "Max Q (moment of peak aerodynamic stress on the rocket)",
       "start": {
@@ -247,6 +291,26 @@
         "precision": "second"
       },
       "category": "flight",
+      "sources": [
+        {
+          "label": "SpaceX \u2014 Starship Flight 15",
+          "url": "https://www.spacex.com/launches/starship-flight-15"
+        }
+      ]
+    },
+    {
+      "id": "ship-flight",
+      "title": "Ship flight",
+      "start": {
+        "at": "2026-11-13T22:49:57Z",
+        "precision": "second"
+      },
+      "end": {
+        "at": "2026-11-14T21:20:10Z",
+        "precision": "second"
+      },
+      "category": "phase",
+      "style": { "color": "#009E73" },
       "sources": [
         {
           "label": "SpaceX \u2014 Starship Flight 15",
