@@ -154,6 +154,7 @@
       position: absolute;
       border-radius: 999px;
       background: #000;
+      cursor: pointer;
     }
 
     .event-bar::after {
@@ -353,6 +354,27 @@
       setZoom(zoom / 2, anchor);
     }
 
+    // Clicking a duration event's bar snaps the zoom and scroll so
+    // the event spans the page: the largest zoom step (powers of two,
+    // 1x-128x) at which the event still fits inside the viewport,
+    // with the event centred. A short event therefore fills less of
+    // the page at the top step than a long one does.
+    function zoomToEvent(startFrac, endFrac) {
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const span = endFrac - startFrac;
+      const step = Math.min(7, Math.max(0, Math.floor(Math.log2(1 / (0.8 * span)))));
+      setZoom(2 ** step);
+
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      const mid = ((startFrac + endFrac) / 2) * trackLength;
+      if (landscape) {
+        window.scrollTo(rect.left + window.scrollX + mid - window.innerWidth / 2, window.scrollY);
+      } else {
+        window.scrollTo(window.scrollX, rect.top + window.scrollY + mid - window.innerHeight / 2);
+      }
+    }
+
     // Baseline method: + / - buttons, now inside the slider bar.
     // Their pointerdown must not reach the slider track, or pressing
     // - would jump the zoom to 1x instead of stepping down one level.
@@ -471,6 +493,7 @@
         if (event.style && event.style.color) {
           bar.style.background = event.style.color;
         }
+        bar.addEventListener('click', () => zoomToEvent(position(starts[index]) / 100, position(ends[index]) / 100));
         track.appendChild(bar);
       });
 
