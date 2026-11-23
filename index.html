@@ -390,13 +390,17 @@
 
     const track = document.querySelector('.timeline-track');
 
-    // Zoom is 128 steps, step 0 showing the whole timeline (1x) and
-    // step 127 the maximum. The steps are geometric: each one
-    // multiplies the zoom by the same ratio, so the slider feels even
-    // across the whole range. The maximum is set from the data when
-    // the timeline loads (see computeMaxZoom); until then it is the
-    // old 128x, which is also the floor, so a sparse timeline never
-    // loses range it used to have.
+    // Zoom runs on a 0-127 scale, step 0 showing the whole timeline
+    // (1x) and step 127 the maximum. The scale is geometric: each
+    // unit multiplies the zoom by the same ratio, so the slider feels
+    // even across the whole range. Positions on the scale are
+    // continuous, not just whole steps, so a click can land on the
+    // exact zoom that fits an event, and the slider moves smoothly;
+    // the quick methods still jump 16 units at a time. The maximum
+    // is set from the data when the timeline loads (see
+    // computeMaxZoom); until then it is the old 128x, which is also
+    // the floor, so a sparse timeline never loses range it used to
+    // have.
     const ZOOM_STEPS = 128;
     const ZOOM_JUMP = 16;
     let maxZoom = 128;
@@ -427,7 +431,7 @@
       zoomInButton.disabled = zoomStep >= ZOOM_STEPS - 1;
       zoomOutButton.disabled = zoomStep <= 0;
       zoomTrack.style.setProperty('--frac', String(zoomStep / (ZOOM_STEPS - 1)));
-      zoomTrack.setAttribute('aria-valuenow', String(zoomStep));
+      zoomTrack.setAttribute('aria-valuenow', String(Math.round(zoomStep)));
       zoomTrack.setAttribute('aria-valuetext', formatZoom(zoom));
       console.log('Zoom:', formatZoom(zoom));
       layoutLabels();
@@ -474,17 +478,16 @@
     }
 
     // Clicking a duration event's bar or label snaps the zoom and
-    // scroll so the event spans the page: the largest step at which
-    // the event still fits inside the viewport, with the event
-    // centred. With 128 steps that is now within a few percent of an
-    // exact fit, instead of up to 2x off as the old powers of two
-    // were. A short event therefore fills less of the page at the
-    // top step than a long one does.
+    // scroll so the event spans the page: the exact zoom at which
+    // the event fills the viewport, with the event centred. The
+    // scale is continuous, so this is the precise fit rather than
+    // the nearest step. A short event therefore fills less of the
+    // page at the top step than a long one does.
     function zoomToEvent(startFrac, endFrac) {
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       const span = endFrac - startFrac;
       const exactFit = 1 / (0.8 * span);
-      const step = Math.min(ZOOM_STEPS - 1, Math.max(0, Math.floor(Math.log(exactFit) / Math.log(zoomForStep(1)))));
+      const step = Math.min(ZOOM_STEPS - 1, Math.max(0, Math.log(exactFit) / Math.log(zoomForStep(1))));
       setZoomStep(step);
 
       const rect = track.getBoundingClientRect();
@@ -541,13 +544,13 @@
       button.addEventListener('pointerdown', (event) => event.stopPropagation());
     }
 
-    // Custom slider, log scale, one step per notch (1x to max zoom).
-    // Click or drag on the bar to set the zoom exactly; arrow keys
-    // move a single step when the bar has focus.
+    // Custom slider, log scale (1x to max zoom). Click or drag on
+    // the bar to set the zoom; arrow keys move a single unit when
+    // the bar has focus.
     function sliderStepFromEvent(event) {
       const rect = zoomTrack.getBoundingClientRect();
       const frac = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-      return Math.round(frac * (ZOOM_STEPS - 1));
+      return frac * (ZOOM_STEPS - 1);
     }
 
     let sliderDragging = false;
