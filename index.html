@@ -250,6 +250,16 @@
         transform: translateX(-50%);
       }
 
+      /* An off-screen label points at the edge its event lies
+         beyond, so it is not mistaken for an event at the edge. */
+      .event-label.offscreen-before .event-label-title::before {
+        content: '‹ ';
+      }
+
+      .event-label.offscreen-after .event-label-title::after {
+        content: ' ›';
+      }
+
       .event-label.label-above {
         bottom: calc(100% + 8px);
       }
@@ -322,6 +332,14 @@
       .event-label {
         top: var(--pos);
         transform: translateY(-50%);
+      }
+
+      .event-label.offscreen-before .event-label-title::before {
+        content: '∧ ';
+      }
+
+      .event-label.offscreen-after .event-label-title::after {
+        content: ' ∨';
       }
 
       .event-label.label-above {
@@ -403,6 +421,10 @@
     // have.
     const ZOOM_STEPS = 128;
     const ZOOM_JUMP = 16;
+    // How much of the viewport a click-to-zoom fit fills: 90%, so
+    // the fitted range lands fully in view with a 5% margin at each
+    // side instead of exactly on the viewport edge.
+    const FIT_FRACTION = 0.9;
     let maxZoom = 128;
     let zoomStep = 0;
     let zoom = 1;
@@ -422,6 +444,18 @@
     // call hit the variable before it existed and the whole script
     // died before the timeline loaded.
     let labelTargets = [];
+
+    // The lanes the on-screen labels ended up in, as intervals
+    // along the track in px. layoutLabels fills this in; the
+    // off-screen labels copy it so they do not overlap an
+    // on-screen label in the lane they take. It holds on-screen
+    // labels only: the off-screen placements go in a throwaway
+    // copy, or their intervals would pile up here on every scroll
+    // and eventually crowd the edge labels out entirely.
+    let placedLanes = [[], []];
+
+    // The gap kept between neighbouring labels in a lane.
+    const LABEL_GAP = 4;
 
     const zoomInButton = document.getElementById('zoom-in');
     const zoomOutButton = document.getElementById('zoom-out');
@@ -477,16 +511,19 @@
       setZoomStep(zoomStep - ZOOM_JUMP, anchor);
     }
 
-    // Clicking a duration event's bar or label snaps the zoom and
-    // scroll so the event spans the page: the exact zoom at which
-    // the event fills the viewport, with the event centred. The
-    // scale is continuous, so this is the precise fit rather than
-    // the nearest step. A short event therefore fills less of the
-    // page at the top step than a long one does.
-    function zoomToEvent(startFrac, endFrac) {
+    // Snap the zoom and scroll so a time range spans the page: the
+    // exact zoom at which the range fills 90% of the viewport, with
+    // the range centred, so the fitted event lands fully in view
+    // with a margin at each side instead of exactly on the
+    // viewport edge. The scale is continuous, so this is the
+    // precise fit rather than the nearest step. Clicking a duration
+    // event's bar or label fits the event itself; clicking an
+    // off-screen label fits the union of the visible range and the
+    // event, so what is already on screen stays in view.
+    function zoomToRange(startFrac, endFrac) {
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       const span = endFrac - startFrac;
-      const exactFit = 1 / (0.8 * span);
+      const exactFit = FIT_FRACTION / (0.8 * span);
       const step = Math.min(ZOOM_STEPS - 1, Math.max(0, Math.log(exactFit) / Math.log(zoomForStep(1))));
       setZoomStep(step);
 
@@ -661,7 +698,7 @@
         if (event.style && event.style.color) {
           bar.style.background = event.style.color;
         }
-        bar.addEventListener('click', () => zoomToEvent(position(starts[index]) / 100, position(ends[index]) / 100));
+        bar.addEventListener('click', () => zoomToRange(position(starts[index]) / 100, position(ends[index]) / 100));
         bars.push({ bar, span: ends[index] - starts[index] });
         labelTargets.push({ event, frac: (position(starts[index]) + position(ends[index])) / 2, startFrac: position(starts[index]) / 100, endFrac: position(ends[index]) / 100 });
       });
@@ -690,6 +727,30 @@
     // it fits without overlapping a label already there; the rest are
     // suppressed. Placement depends on pixel widths, so it is redone
     // whenever the zoom or the window size changes.
+    // One label box for an event: title plus the first few words
+    // of its description, with a border in the event's colour.
+    // Events without a colour keep the default grey border.
+    function makeLabel(event) {
+      const label = document.createElement('div');
+      label.className = 'event-label';
+      label.setAttribute('aria-hidden', 'true');
+      const title = document.createElement('div');
+      title.className = 'event-label-title';
+      title.textContent = event.title;
+      label.appendChild(title);
+      if (event.description) {
+        const words = event.description.split(/\s+/);
+        const excerpt = document.createElement('div');
+        excerpt.className = 'event-label-excerpt';
+        excerpt.textContent = words.slice(0, 8).join(' ') + (words.length > 8 ? '…' : '');
+        label.appendChild(excerpt);
+      }
+      if (event.style && event.style.color) {
+        label.style.borderColor = event.style.color;
+      }
+      return label;
+    }
+
     function layoutLabels() {
       track.querySelectorAll('.event-label').forEach((label) => label.remove());
       if (!labelTargets.length) {
@@ -697,31 +758,11 @@
       }
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       const trackLength = landscape ? track.offsetWidth : track.offsetHeight;
-      const GAP = 4;
       const lanes = [[], []];
 
       labelTargets.forEach(({ event, frac, startFrac, endFrac }) => {
-        const label = document.createElement('div');
-        label.className = 'event-label';
-        label.setAttribute('aria-hidden', 'true');
-        const title = document.createElement('div');
-        title.className = 'event-label-title';
-        title.textContent = event.title;
-        label.appendChild(title);
-        if (event.description) {
-          const words = event.description.split(/\s+/);
-          const excerpt = document.createElement('div');
-          excerpt.className = 'event-label-excerpt';
-          excerpt.textContent = words.slice(0, 8).join(' ') + (words.length > 8 ? '…' : '');
-          label.appendChild(excerpt);
-        }
+        const label = makeLabel(event);
         label.style.setProperty('--pos', `${frac}%`);
-        // The label's border matches its event's colour, so a label
-        // is visibly tied to the dot or bar it names. Events without
-        // a colour keep the default grey border.
-        if (event.style && event.style.color) {
-          label.style.borderColor = event.style.color;
-        }
         track.appendChild(label);
         // A duration event's label is clickable too, and snaps the
         // zoom the same way its bar does. Other labels stay
@@ -730,11 +771,11 @@
         if (event.end) {
           label.style.pointerEvents = 'auto';
           label.style.cursor = 'pointer';
-          label.addEventListener('click', () => zoomToEvent(startFrac, endFrac));
+          label.addEventListener('click', () => zoomToRange(startFrac, endFrac));
         }
         const size = landscape ? label.offsetWidth : label.offsetHeight;
         const centre = (frac / 100) * trackLength;
-        const interval = [centre - size / 2 - GAP, centre + size / 2 + GAP];
+        const interval = [centre - size / 2 - LABEL_GAP, centre + size / 2 + LABEL_GAP];
         const lane = lanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
         if (lane === -1) {
           label.remove();
@@ -743,9 +784,122 @@
         lanes[lane].push(interval);
         label.classList.add(lane === 0 ? 'label-above' : 'label-below');
       });
+      placedLanes = lanes;
+      updateOffscreenLabels();
+    }
+
+    // The fraction of the timeline currently on screen, clamped
+    // to the timeline itself (the end padding shows no events).
+    function visibleFracRange() {
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      if (!trackLength) {
+        return [0, 1];
+      }
+      const scroll = landscape ? window.scrollX : window.scrollY;
+      const viewport = landscape ? window.innerWidth : window.innerHeight;
+      const trackStart = (landscape ? rect.left : rect.top) + scroll;
+      const start = Math.min(1, Math.max(0, (scroll - trackStart) / trackLength));
+      const end = Math.min(1, Math.max(0, (scroll + viewport - trackStart) / trackLength));
+      return [start, end];
+    }
+
+    // Labels for the closest events off screen: at most one pinned
+    // at each edge of the viewport, so a zoomed-in stretch of empty
+    // timeline still shows what lies beyond it in each direction.
+    // An off-screen label is an ordinary label box for the event,
+    // with a chevron pointing at the edge its event lies beyond; it
+    // takes the first lane where it fits without overlapping an
+    // on-screen label, and is suppressed if neither lane has room.
+    // Clicking it zooms out just enough that the events already on
+    // screen stay in view and this event comes into view too.
+    function updateOffscreenLabels() {
+      track.querySelectorAll('.offscreen-label').forEach((label) => label.remove());
+      if (!labelTargets.length) {
+        return;
+      }
+      const [visStart, visEnd] = visibleFracRange();
+      let before = null;
+      let after = null;
+      for (const target of labelTargets) {
+        const frac = target.frac / 100;
+        if (frac < visStart && (!before || frac > before.frac / 100)) {
+          before = target;
+        } else if (frac > visEnd && (!after || frac < after.frac / 100)) {
+          after = target;
+        }
+      }
+      // A fresh copy of the on-screen lanes for this placement
+      // round, so the two edge labels do not overlap each other
+      // but their intervals are forgotten afterwards.
+      const lanes = placedLanes.map((lane) => [...lane]);
+      placeOffscreenLabel(before, -1, lanes);
+      placeOffscreenLabel(after, 1, lanes);
+    }
+
+    function placeOffscreenLabel(target, direction, lanes) {
+      if (!target) {
+        return;
+      }
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      if (!trackLength) {
+        return;
+      }
+      const scroll = landscape ? window.scrollX : window.scrollY;
+      const viewport = landscape ? window.innerWidth : window.innerHeight;
+      const trackStart = (landscape ? rect.left : rect.top) + scroll;
+      const label = makeLabel(target.event);
+      label.classList.add('offscreen-label', direction < 0 ? 'offscreen-before' : 'offscreen-after');
+      label.style.pointerEvents = 'auto';
+      label.style.cursor = 'pointer';
+      label.addEventListener('click', () => {
+        const [visStart, visEnd] = visibleFracRange();
+        const startFrac = target.startFrac ?? target.frac / 100;
+        const endFrac = target.endFrac ?? target.frac / 100;
+        zoomToRange(Math.min(visStart, startFrac), Math.max(visEnd, endFrac));
+      });
+      track.appendChild(label);
+      // Position it at the viewport edge: measure its size first,
+      // then set --pos so its outer edge sits a small gap inside
+      // the viewport. In portrait the bottom edge clears the fixed
+      // zoom slider (48px tall, 1rem from the bottom).
+      const size = landscape ? label.offsetWidth : label.offsetHeight;
+      const edgeGap = !landscape && direction > 0 ? 72 : 8;
+      const edgePx = direction < 0
+        ? scroll + edgeGap + size / 2
+        : scroll + viewport - edgeGap - size / 2;
+      const centre = edgePx - trackStart;
+      label.style.setProperty('--pos', `${(centre / trackLength) * 100}%`);
+      const interval = [centre - size / 2 - LABEL_GAP, centre + size / 2 + LABEL_GAP];
+      const lane = lanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
+      if (lane === -1) {
+        label.remove();
+        return;
+      }
+      lanes[lane].push(interval);
+      label.classList.add(lane === 0 ? 'label-above' : 'label-below');
     }
 
     window.addEventListener('resize', () => layoutLabels());
+
+    // Scrolling moves the viewport along the timeline, so the
+    // closest off-screen events change; re-place their labels as
+    // the user scrolls. Only the off-screen labels move — the
+    // on-screen ones are positioned along the track, so their
+    // layout is unaffected.
+    let offscreenRaf = 0;
+    window.addEventListener('scroll', () => {
+      if (offscreenRaf) {
+        return;
+      }
+      offscreenRaf = requestAnimationFrame(() => {
+        offscreenRaf = 0;
+        updateOffscreenLabels();
+      });
+    }, { passive: true });
 
     console.log('Loading timeline…');
 
