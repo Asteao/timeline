@@ -21,6 +21,7 @@
     {
       "id": "pre-launch",
       "title": "Pre-launch",
+      "description": "Propellant loading, engine chill and final checks before liftoff.",
       "start": {
         "at": "2026-11-13T21:57:36Z",
         "precision": "second"
@@ -221,6 +222,7 @@
     {
       "id": "liftoff",
       "title": "Liftoff",
+      "description": "Starship lifts off from Starbase, Texas.",
       "start": {
         "at": "2026-11-13T22:47:36Z",
         "precision": "second"
@@ -236,6 +238,7 @@
     {
       "id": "booster-flight",
       "title": "Booster flight",
+      "description": "Super Heavy ascends, separates, and returns to be caught by the tower.",
       "start": {
         "at": "2026-11-13T22:47:36Z",
         "precision": "second"
@@ -301,6 +304,7 @@
     {
       "id": "ship-flight",
       "title": "Ship flight",
+      "description": "Starship coasts for more than 20 hours, deploys Starlink satellites, and returns to be caught.",
       "start": {
         "at": "2026-11-13T22:49:57Z",
         "precision": "second"
@@ -636,6 +640,7 @@
     {
       "id": "starship-landing-burn-shutdown-and-catch",
       "title": "Starship landing burn shutdown and catch",
+      "description": "Starship is caught by Mechazilla.",
       "start": {
         "at": "2026-11-14T21:20:10Z",
         "precision": "second"
