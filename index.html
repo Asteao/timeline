@@ -163,6 +163,38 @@
       background: #fff;
     }
 
+    /* Labels for events: a small box floating above or below the line
+       (left or right of it in portrait), with the event title and the
+       first few words of its description. A short stem joins the box
+       to its dot or bar. Labels are placed only where they fit; see
+       layoutLabels. */
+    .event-label {
+      position: absolute;
+      max-width: 180px;
+      padding: 4px 8px;
+      background: #fff;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.35;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .event-label::after {
+      content: '';
+      position: absolute;
+      background: #bbb;
+    }
+
+    .event-label-title {
+      font-weight: 600;
+    }
+
+    .event-label-excerpt {
+      color: #555;
+    }
+
     /* Wider than tall: horizontal line, dots and bars positioned left to right. */
     @media (orientation: landscape) {
       body {
@@ -206,6 +238,33 @@
         right: 6px;
         top: 50%;
         transform: translateY(-50%);
+      }
+
+      .event-label {
+        left: var(--pos);
+        transform: translateX(-50%);
+      }
+
+      .event-label.label-above {
+        bottom: calc(100% + 8px);
+      }
+
+      .event-label.label-above::after {
+        left: 50%;
+        top: 100%;
+        width: 1px;
+        height: 8px;
+      }
+
+      .event-label.label-below {
+        top: calc(100% + 8px);
+      }
+
+      .event-label.label-below::after {
+        left: 50%;
+        bottom: 100%;
+        width: 1px;
+        height: 8px;
       }
     }
 
@@ -252,6 +311,34 @@
         bottom: 6px;
         left: 50%;
         transform: translateX(-50%);
+      }
+
+      /* Above/below the line means left/right of it here. */
+      .event-label {
+        top: var(--pos);
+        transform: translateY(-50%);
+      }
+
+      .event-label.label-above {
+        right: calc(100% + 8px);
+      }
+
+      .event-label.label-above::after {
+        top: 50%;
+        left: 100%;
+        width: 8px;
+        height: 1px;
+      }
+
+      .event-label.label-below {
+        left: calc(100% + 8px);
+      }
+
+      .event-label.label-below::after {
+        top: 50%;
+        right: 100%;
+        width: 8px;
+        height: 1px;
       }
     }
   </style>
@@ -314,6 +401,7 @@
       zoomTrack.setAttribute('aria-valuenow', String(step));
       zoomTrack.setAttribute('aria-valuetext', `${zoom}x`);
       console.log('Zoom:', `${zoom}x`);
+      layoutLabels();
     }
 
     // Zoom, keeping the timeline point under `anchor` (client coordinates)
@@ -451,12 +539,17 @@
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
 
+    // Events and the fraction along the track their label anchors to:
+    // a dot's position, or a bar's midpoint.
+    let labelTargets = [];
+
     function drawEvents(events) {
       const starts = events.map((event) => Date.parse(event.start.at));
       const ends = events.map((event) => (event.end ? Date.parse(event.end.at) : null));
       const start = Math.min(...starts);
       const end = Math.max(...starts, ...ends.filter((time) => time !== null));
       const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
+      labelTargets = [];
 
       // Bars first, so dots render on top of them.
       events.forEach((event, index) => {
@@ -472,6 +565,7 @@
           bar.style.background = event.style.color;
         }
         track.appendChild(bar);
+        labelTargets.push({ event, frac: (position(starts[index]) + position(ends[index])) / 2 });
       });
 
       events.forEach((event, index) => {
@@ -486,8 +580,58 @@
           dot.style.background = event.style.color;
         }
         track.appendChild(dot);
+        labelTargets.push({ event, frac: position(starts[index]) });
       });
     }
+
+    // Labels: one small box per event, title plus the first few words
+    // of its description, floating above or below the line. There is
+    // only room for some of them, so each label is placed greedily in
+    // time order into the first of two lanes (above, then below) where
+    // it fits without overlapping a label already there; the rest are
+    // suppressed. Placement depends on pixel widths, so it is redone
+    // whenever the zoom or the window size changes.
+    function layoutLabels() {
+      track.querySelectorAll('.event-label').forEach((label) => label.remove());
+      if (!labelTargets.length) {
+        return;
+      }
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const trackLength = landscape ? track.offsetWidth : track.offsetHeight;
+      const GAP = 4;
+      const lanes = [[], []];
+
+      labelTargets.forEach(({ event, frac }) => {
+        const label = document.createElement('div');
+        label.className = 'event-label';
+        label.setAttribute('aria-hidden', 'true');
+        const title = document.createElement('div');
+        title.className = 'event-label-title';
+        title.textContent = event.title;
+        label.appendChild(title);
+        if (event.description) {
+          const words = event.description.split(/\s+/);
+          const excerpt = document.createElement('div');
+          excerpt.className = 'event-label-excerpt';
+          excerpt.textContent = words.slice(0, 8).join(' ') + (words.length > 8 ? '…' : '');
+          label.appendChild(excerpt);
+        }
+        label.style.setProperty('--pos', `${frac}%`);
+        track.appendChild(label);
+        const size = landscape ? label.offsetWidth : label.offsetHeight;
+        const centre = (frac / 100) * trackLength;
+        const interval = [centre - size / 2 - GAP, centre + size / 2 + GAP];
+        const lane = lanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
+        if (lane === -1) {
+          label.remove();
+          return;
+        }
+        lanes[lane].push(interval);
+        label.classList.add(lane === 0 ? 'label-above' : 'label-below');
+      });
+    }
+
+    window.addEventListener('resize', () => layoutLabels());
 
     console.log('Loading timeline…');
 
@@ -496,6 +640,7 @@
         timeline = data;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
         drawEvents(data.events);
+        layoutLabels();
       })
       .catch((error) => {
         console.error('Could not load timeline:', error);
