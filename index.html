@@ -389,6 +389,14 @@
     const MIN_ZOOM = 1;
     const MAX_ZOOM = 128;
 
+    // Events and the fraction along the track their label anchors to:
+    // a dot's position, or a bar's midpoint. Declared here, before
+    // syncZoomUI runs at load, because syncZoomUI now re-lays out
+    // the labels; declaring it next to drawEvents meant the load-time
+    // call hit the variable before it existed and the whole script
+    // died before the timeline loaded.
+    let labelTargets = [];
+
     const zoomInButton = document.getElementById('zoom-in');
     const zoomOutButton = document.getElementById('zoom-out');
     const zoomTrack = document.getElementById('zoom-track');
@@ -538,10 +546,6 @@
 
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
-
-    // Events and the fraction along the track their label anchors to:
-    // a dot's position, or a bar's midpoint.
-    let labelTargets = [];
 
     function drawEvents(events) {
       const starts = events.map((event) => Date.parse(event.start.at));
