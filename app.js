@@ -34,10 +34,15 @@
     // have.
     const ZOOM_STEPS = 128;
     const ZOOM_JUMP = 16;
-    // How much of the viewport a click-to-zoom fit fills: 90%, so
-    // the fitted range lands fully in view with a 5% margin at each
-    // side instead of exactly on the viewport edge.
+    // How much of the viewport a click-to-zoom fit fills: 90% in
+    // landscape, so the fitted range lands fully in view with a 5%
+    // margin at each side instead of exactly on the viewport edge.
+    // Portrait fills 85%: the phone viewport is much shorter in px
+    // while a label is the same absolute size, so 5% there leaves
+    // a tall label almost touching the edge (on a phone with the
+    // address bar shown, the tallest label is clipped outright).
     const FIT_FRACTION = 0.9;
+    const FIT_FRACTION_PORTRAIT = 0.85;
     let maxZoom = 128;
     let zoomStep = 0;
     let zoom = 1;
@@ -125,18 +130,20 @@
     }
 
     // Snap the zoom and scroll so a time range spans the page: the
-    // exact zoom at which the range fills 90% of the viewport, with
-    // the range centred, so the fitted event lands fully in view
-    // with a margin at each side instead of exactly on the
-    // viewport edge. The scale is continuous, so this is the
-    // precise fit rather than the nearest step. Clicking a duration
-    // event's bar or label fits the event itself; clicking an
-    // off-screen label fits the union of the visible range and the
-    // event, so what is already on screen stays in view.
+    // exact zoom at which the range fills 90% of the viewport in
+    // landscape (85% in portrait), with the range centred, so the
+    // fitted event lands fully in view with a margin at each side
+    // instead of exactly on the viewport edge. The scale is
+    // continuous, so this is the precise fit rather than the nearest
+    // step. Clicking a duration event's bar or label fits the event
+    // itself; clicking an off-screen label fits the union of the
+    // visible range and the event, so what is already on screen
+    // stays in view.
     function zoomToRange(startFrac, endFrac) {
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       const span = endFrac - startFrac;
-      const exactFit = FIT_FRACTION / (0.8 * span);
+      const fitFraction = landscape ? FIT_FRACTION : FIT_FRACTION_PORTRAIT;
+      const exactFit = fitFraction / (0.8 * span);
       const step = Math.min(ZOOM_STEPS - 1, Math.max(0, Math.log(exactFit) / Math.log(zoomForStep(1))));
       setZoomStep(step);
 
