@@ -133,6 +133,10 @@
       height: 12px;
       border-radius: 50%;
       background: #000;
+      /* Dots render on top of bars but are not interactive, so clicks
+         pass through to the bar beneath instead of landing on a dot
+         and doing nothing. */
+      pointer-events: none;
     }
 
     .event-dot::after {
