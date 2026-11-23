@@ -275,7 +275,9 @@
   <div class="timeline-pad" aria-hidden="true"></div>
 
   <script>
-    const TIMELINE_URL = 'https://timeline.asteao.net/timelines/starship-flight-15.json';
+    // Relative so a branch preview loads its own copy of the timeline
+    // instead of the one on the live site.
+    const TIMELINE_URL = 'timelines/starship-flight-15.json';
 
     let timeline = null;
 
