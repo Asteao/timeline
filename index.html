@@ -443,8 +443,11 @@
 
     // The lanes the on-screen labels ended up in, as intervals
     // along the track in px. layoutLabels fills this in; the
-    // off-screen labels read it so they do not overlap an
-    // on-screen label in the lane they take.
+    // off-screen labels copy it so they do not overlap an
+    // on-screen label in the lane they take. It holds on-screen
+    // labels only: the off-screen placements go in a throwaway
+    // copy, or their intervals would pile up here on every scroll
+    // and eventually crowd the edge labels out entirely.
     let placedLanes = [[], []];
 
     // The gap kept between neighbouring labels in a lane.
@@ -821,11 +824,15 @@
           after = target;
         }
       }
-      placeOffscreenLabel(before, -1);
-      placeOffscreenLabel(after, 1);
+      // A fresh copy of the on-screen lanes for this placement
+      // round, so the two edge labels do not overlap each other
+      // but their intervals are forgotten afterwards.
+      const lanes = placedLanes.map((lane) => [...lane]);
+      placeOffscreenLabel(before, -1, lanes);
+      placeOffscreenLabel(after, 1, lanes);
     }
 
-    function placeOffscreenLabel(target, direction) {
+    function placeOffscreenLabel(target, direction, lanes) {
       if (!target) {
         return;
       }
@@ -861,12 +868,12 @@
       const centre = edgePx - trackStart;
       label.style.setProperty('--pos', `${(centre / trackLength) * 100}%`);
       const interval = [centre - size / 2 - LABEL_GAP, centre + size / 2 + LABEL_GAP];
-      const lane = placedLanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
+      const lane = lanes.findIndex((placed) => placed.every(([from, to]) => interval[1] <= from || interval[0] >= to));
       if (lane === -1) {
         label.remove();
         return;
       }
-      placedLanes[lane].push(interval);
+      lanes[lane].push(interval);
       label.classList.add(lane === 0 ? 'label-above' : 'label-below');
     }
 
