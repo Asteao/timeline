@@ -245,10 +245,12 @@
 
     /* Time-scale ticks: short dashes across the timeline marking
        unit boundaries, sized by unit (see --tick-size, set by JS).
-       They live in a container appended after the dots and bars,
-       so they paint above them, and take no pointer events, so
-       clicks pass through to the bars beneath. Labels, appended
-       later, paint above the ticks. */
+       They are the same light grey as the zoom slider (#bbb), so
+       they read as scale marks rather than events. They live in a
+       container appended after the dots and bars, so they paint
+       above them, and take no pointer events, so clicks pass
+       through to the bars beneath. Labels, appended later, paint
+       above the ticks. */
     .timeline-ticks {
       position: absolute;
       inset: 0;
@@ -257,7 +259,7 @@
 
     .timeline-tick {
       position: absolute;
-      background: #000;
+      background: #bbb;
       pointer-events: none;
     }
 

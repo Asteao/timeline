@@ -68,7 +68,8 @@
     // Time-scale ticks: short dashes across the timeline marking the
     // boundaries of time units, sized by unit so the scale reads at a
     // glance — seconds are the shortest, then minutes, hours, days,
-    // and on up to millennia. The units are the data structure's own
+    // and on up to millennia: 8px for seconds, growing 4px per level
+    // to 40px for millennia. The units are the data structure's own
     // precision list (see data-structure.md). Which units appear
     // depends on the zoom: a unit is shown only when its ticks are at
     // least MIN_TICK_SPACING px apart, so zooming in reveals finer
@@ -80,15 +81,15 @@
     // for the spacing check; the boundaries themselves follow the
     // calendar (1st of the month, Jan 1), see tickBoundaries.
     const TICK_UNITS = [
-      { name: 'second', ms: 1000, size: 16 },
-      { name: 'minute', ms: 60 * 1000, size: 24 },
-      { name: 'hour', ms: 3600 * 1000, size: 32 },
-      { name: 'day', ms: 86400 * 1000, size: 40 },
-      { name: 'month', ms: 30.44 * 86400 * 1000, size: 48 },
-      { name: 'year', ms: 365.25 * 86400 * 1000, size: 56 },
-      { name: 'decade', ms: 10 * 365.25 * 86400 * 1000, size: 64 },
-      { name: 'century', ms: 100 * 365.25 * 86400 * 1000, size: 72 },
-      { name: 'millennium', ms: 1000 * 365.25 * 86400 * 1000, size: 80 },
+      { name: 'second', ms: 1000, size: 8 },
+      { name: 'minute', ms: 60 * 1000, size: 12 },
+      { name: 'hour', ms: 3600 * 1000, size: 16 },
+      { name: 'day', ms: 86400 * 1000, size: 20 },
+      { name: 'month', ms: 30.44 * 86400 * 1000, size: 24 },
+      { name: 'year', ms: 365.25 * 86400 * 1000, size: 28 },
+      { name: 'decade', ms: 10 * 365.25 * 86400 * 1000, size: 32 },
+      { name: 'century', ms: 100 * 365.25 * 86400 * 1000, size: 36 },
+      { name: 'millennium', ms: 1000 * 365.25 * 86400 * 1000, size: 40 },
     ];
     const MIN_TICK_SPACING = 8;
 
