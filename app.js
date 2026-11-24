@@ -65,6 +65,45 @@
     // died before the timeline loaded.
     let labelTargets = [];
 
+    // Time-scale ticks: short dashes across the timeline marking the
+    // boundaries of time units, sized by unit so the scale reads at a
+    // glance — seconds are the shortest, then minutes, hours, days,
+    // and on up to millennia: 4px for seconds, growing 1px per level
+    // to 12px for millennia. The 1px steps mean adjacent units are
+    // barely distinguishable by length; the size cue is now just the
+    // gradient from the shortest to the longest unit. The units are
+    // the data structure's own precision list (see data-structure.md). Which units appear
+    // depends on the zoom: a unit is shown only when its ticks are at
+    // least MIN_TICK_SPACING px apart, so zooming in reveals finer
+    // units and zooming out hides them before they merge into a solid
+    // line. Ticks are drawn only for the visible range, re-placed on
+    // zoom, scroll and resize — drawing them for the whole timeline
+    // at second precision would be tens of thousands of elements.
+    // The `ms` for month and above is a nominal duration, used only
+    // for the spacing check; the boundaries themselves follow the
+    // calendar (1st of the month, Jan 1), see tickBoundaries.
+    const TICK_UNITS = [
+      { name: 'second', ms: 1000, size: 4 },
+      { name: 'minute', ms: 60 * 1000, size: 5 },
+      { name: 'hour', ms: 3600 * 1000, size: 6 },
+      { name: 'day', ms: 86400 * 1000, size: 7 },
+      { name: 'month', ms: 30.44 * 86400 * 1000, size: 8 },
+      { name: 'year', ms: 365.25 * 86400 * 1000, size: 9 },
+      { name: 'decade', ms: 10 * 365.25 * 86400 * 1000, size: 10 },
+      { name: 'century', ms: 100 * 365.25 * 86400 * 1000, size: 11 },
+      { name: 'millennium', ms: 1000 * 365.25 * 86400 * 1000, size: 12 },
+    ];
+    const MIN_TICK_SPACING = 8;
+
+    // The timeline's time range in ms, set when the events are drawn.
+    let timelineStartMs = 0;
+    let timelineEndMs = 0;
+
+    // The container holding the tick elements, created once the
+    // events are drawn (after the dots and bars, so it paints above
+    // them). updateTicks fills it.
+    let ticksContainer = null;
+
     // The lanes the on-screen labels ended up in, as intervals
     // along the track in px. layoutLabels fills this in; the
     // off-screen labels copy it so they do not overlap an
@@ -464,6 +503,8 @@
       const ends = events.map((event) => (event.end ? Date.parse(event.end.at) : null));
       const start = Math.min(...starts);
       const end = Math.max(...starts, ...ends.filter((time) => time !== null));
+      timelineStartMs = start;
+      timelineEndMs = end;
       const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
       labelTargets = [];
 
@@ -578,6 +619,101 @@
       }
     }
 
+    // A UTC date built with setUTCFullYear, so years 0-99 and
+    // negative years are set as given instead of as 1900s.
+    function utcDate(year, month, day) {
+      const d = new Date(0);
+      d.setUTCFullYear(year, month, day);
+      d.setUTCHours(0, 0, 0, 0);
+      return d;
+    }
+
+    // The boundaries of a time unit inside [fromMs, toMs]: seconds
+    // at :00, minutes at :00, hours on the hour, days at midnight
+    // UTC, months on the 1st, years on Jan 1, decades/centuries/
+    // millennia on Jan 1 of the year starting the period. Fixed
+    // units align to multiples of their duration since the epoch;
+    // calendar units are walked month by month / year by year.
+    function tickBoundaries(unitName, fromMs, toMs) {
+      const out = [];
+      if (unitName === 'second' || unitName === 'minute' || unitName === 'hour' || unitName === 'day') {
+        const unit = TICK_UNITS.find((u) => u.name === unitName);
+        let t = Math.ceil(fromMs / unit.ms) * unit.ms;
+        for (; t <= toMs; t += unit.ms) {
+          out.push(t);
+        }
+        return out;
+      }
+      const startDate = new Date(fromMs);
+      const year = startDate.getUTCFullYear();
+      const month = startDate.getUTCMonth();
+      if (unitName === 'month') {
+        // First day of this month, or next month if already past it.
+        let d = utcDate(year, month, 1);
+        if (d.getTime() < fromMs) {
+          d = utcDate(year, month + 1, 1);
+        }
+        for (; d.getTime() <= toMs; d = utcDate(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)) {
+          out.push(d.getTime());
+        }
+        return out;
+      }
+      // year / decade / century / millennium: Jan 1 of the period's
+      // first year.
+      const span = unitName === 'year' ? 1 : unitName === 'decade' ? 10 : unitName === 'century' ? 100 : 1000;
+      let firstYear = Math.floor(year / span) * span;
+      let d = utcDate(firstYear, 0, 1);
+      if (d.getTime() < fromMs) {
+        d = utcDate(firstYear + span, 0, 1);
+      }
+      for (; d.getTime() <= toMs; d = utcDate(d.getUTCFullYear() + span, 0, 1)) {
+        out.push(d.getTime());
+      }
+      return out;
+    }
+
+    // Fill the tick container with dashes for the visible range.
+    // Re-run whenever the view changes — zoom and resize via
+    // layoutLabels, scrolling via the scroll listener below.
+    function updateTicks() {
+      if (!ticksContainer || timelineEndMs <= timelineStartMs) {
+        return;
+      }
+      ticksContainer.querySelectorAll('.timeline-tick').forEach((tick) => tick.remove());
+      const [visStart, visEnd] = visibleFracRange();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const viewport = landscape ? window.innerWidth : window.innerHeight;
+      const rangeMs = timelineEndMs - timelineStartMs;
+      const visStartMs = timelineStartMs + visStart * rangeMs;
+      const visEndMs = timelineStartMs + visEnd * rangeMs;
+      const visSpanMs = visEndMs - visStartMs;
+      if (visSpanMs <= 0) {
+        return;
+      }
+      const pxPerMs = viewport / visSpanMs;
+      for (const unit of TICK_UNITS) {
+        if (unit.ms * pxPerMs < MIN_TICK_SPACING) {
+          continue;
+        }
+        // One extra tick beyond each edge, so scrolling a little
+        // does not immediately show a gap before the next
+        // re-placement.
+        const boundaries = tickBoundaries(unit.name, visStartMs - unit.ms, visEndMs + unit.ms);
+        for (const time of boundaries) {
+          const frac = (time - timelineStartMs) / rangeMs;
+          if (frac < 0 || frac > 1) {
+            continue;
+          }
+          const tick = document.createElement('div');
+          tick.className = 'timeline-tick';
+          tick.setAttribute('aria-hidden', 'true');
+          tick.style.setProperty('--pos', `${frac * 100}%`);
+          tick.style.setProperty('--tick-size', `${unit.size}px`);
+          ticksContainer.appendChild(tick);
+        }
+      }
+    }
+
     // Labels: one small box per event, title plus the first few words
     // of its description, floating above or below the line. There is
     // only room for some of them, so each label is placed greedily in
@@ -645,6 +781,7 @@
       placedLanes = lanes;
       updateOffscreenLabels();
       updateMinimapViewport();
+      updateTicks();
     }
 
     // The fraction of the timeline currently on screen, clamped
@@ -757,6 +894,7 @@
         offscreenRaf = 0;
         updateOffscreenLabels();
         updateMinimapViewport();
+        updateTicks();
       });
     }, { passive: true });
 
@@ -767,6 +905,12 @@
         timeline = data;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
         drawEvents(data.events);
+        // The tick container, created after the dots and bars so it
+        // paints above them (labels, appended later, paint above it).
+        ticksContainer = document.createElement('div');
+        ticksContainer.className = 'timeline-ticks';
+        ticksContainer.setAttribute('aria-hidden', 'true');
+        track.appendChild(ticksContainer);
         drawMinimap(data.events);
         computeMaxZoom(data.events);
         layoutLabels();
