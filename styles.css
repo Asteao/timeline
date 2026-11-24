@@ -243,6 +243,24 @@
       background: #fff;
     }
 
+    /* Time-scale ticks: short dashes across the timeline marking
+       unit boundaries, sized by unit (see --tick-size, set by JS).
+       They live in a container appended after the dots and bars,
+       so they paint above them, and take no pointer events, so
+       clicks pass through to the bars beneath. Labels, appended
+       later, paint above the ticks. */
+    .timeline-ticks {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .timeline-tick {
+      position: absolute;
+      background: #000;
+      pointer-events: none;
+    }
+
     /* Labels for events: a small box floating above or below the line
        (left or right of it in portrait), with the event title and the
        first few words of its description. A short stem joins the box
@@ -366,6 +384,16 @@
         right: 6px;
         top: 50%;
         transform: translateY(-50%);
+      }
+
+      /* A tick is a vertical dash centred on the line, its length
+         (--tick-size) set by JS from its unit. */
+      .timeline-tick {
+        left: var(--pos);
+        top: 50%;
+        width: 2px;
+        height: var(--tick-size);
+        transform: translate(-50%, -50%);
       }
 
       .event-label {
@@ -536,6 +564,16 @@
         bottom: 6px;
         left: 50%;
         transform: translateX(-50%);
+      }
+
+      /* As landscape, but a tick here is a horizontal dash centred
+         on the vertical line. */
+      .timeline-tick {
+        top: var(--pos);
+        left: 50%;
+        height: 2px;
+        width: var(--tick-size);
+        transform: translate(-50%, -50%);
       }
 
       /* Above/below the line means left/right of it here. */
