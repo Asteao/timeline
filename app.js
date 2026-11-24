@@ -299,6 +299,115 @@
       }
     });
 
+    // Pinch to zoom on touch screens. Two fingers on the page zoom
+    // the timeline, anchored at the midpoint between them, with the
+    // zoom following the ratio of the finger distance to the distance
+    // when the second finger landed — so spreading the fingers apart
+    // zooms in and bringing them together zooms out, smoothly and
+    // continuously, like the slider. A single finger is left alone:
+    // the body's touch-action (pan-x in landscape, pan-y in
+    // portrait) lets the browser keep single-finger panning, and
+    // hands the two-finger gesture to the page as pointer events
+    // instead of zooming the page itself. Touches starting on the
+    // zoom slider are the slider's own and are ignored here.
+    const pinchPointers = new Map();
+    let pinchStartDistance = 0;
+    let pinchStartZoom = 1;
+    let pinchStartFrac = 0;
+    let pinchEndTime = 0;
+
+    function pinchDistance() {
+      const [a, b] = [...pinchPointers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function pinchMidpoint() {
+      const [a, b] = [...pinchPointers.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+
+    // The timeline fraction under a client point, clamped to the
+    // timeline itself (a finger over the end padding is outside it).
+    function fracUnderPoint(x, y) {
+      const rect = track.getBoundingClientRect();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const frac = landscape ? (x - rect.left) / rect.width : (y - rect.top) / rect.height;
+      return Math.min(1, Math.max(0, frac));
+    }
+
+    // Zoom to `newZoom` and scroll so the timeline fraction that
+    // was under the pinch's starting midpoint stays under the
+    // midpoint as it moves. Anchoring on that fixed fraction (rather
+    // than re-measuring under the midpoint on every move) means the
+    // content under the fingers never drifts, however the two
+    // fingers take turns moving.
+    function pinchZoomTo(newZoom, midpoint) {
+      const step = Math.log(newZoom) / Math.log(zoomForStep(1));
+      setZoomStep(step);
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      const mid = pinchStartFrac * trackLength;
+      if (landscape) {
+        window.scrollTo(rect.left + window.scrollX + mid - midpoint.x, window.scrollY);
+      } else {
+        window.scrollTo(window.scrollX, rect.top + window.scrollY + mid - midpoint.y);
+      }
+    }
+
+    window.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'touch') {
+        return;
+      }
+      if (event.target.closest?.('.zoom-slider')) {
+        return;
+      }
+      pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchPointers.size === 2) {
+        pinchStartDistance = pinchDistance();
+        pinchStartZoom = zoom;
+        const mid = pinchMidpoint();
+        pinchStartFrac = fracUnderPoint(mid.x, mid.y);
+      }
+    });
+
+    window.addEventListener('pointermove', (event) => {
+      if (!pinchPointers.has(event.pointerId)) {
+        return;
+      }
+      pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchPointers.size === 2 && pinchStartDistance > 0) {
+        const newZoom = Math.min(maxZoom, Math.max(1, pinchStartZoom * pinchDistance() / pinchStartDistance));
+        pinchZoomTo(newZoom, pinchMidpoint());
+      }
+    });
+
+    function endPinchPointer(event) {
+      if (!pinchPointers.has(event.pointerId)) {
+        return;
+      }
+      const wasPinching = pinchPointers.size === 2;
+      pinchPointers.delete(event.pointerId);
+      if (wasPinching) {
+        pinchStartDistance = 0;
+        // A pinch ending on a bar or label must not fire that
+        // element's click, which would snap-zoom and undo the
+        // pinch. Clicks for a short while after a pinch are
+        // swallowed below.
+        pinchEndTime = Date.now();
+      }
+    }
+
+    window.addEventListener('pointerup', endPinchPointer);
+    window.addEventListener('pointercancel', endPinchPointer);
+
+    window.addEventListener('click', (event) => {
+      if (Date.now() - pinchEndTime < 350) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
+
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
 

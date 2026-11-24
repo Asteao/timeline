@@ -207,6 +207,11 @@
     @media (orientation: landscape) {
       body {
         flex-direction: row;
+        /* Single-finger panning along the timeline stays with the
+           browser; a two-finger pinch is handed to the page as
+           pointer events instead of zooming the page itself, so
+           the pinch zooms the timeline (see the pinch handlers). */
+        touch-action: pan-x;
       }
 
       .timeline-pad {
@@ -290,6 +295,8 @@
     @media (orientation: portrait) {
       body {
         flex-direction: column;
+        /* As landscape, but the timeline runs vertically. */
+        touch-action: pan-y;
       }
 
       /* In portrait the zoom slider moves to the right side and
