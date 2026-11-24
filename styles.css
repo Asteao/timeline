@@ -26,12 +26,15 @@
        to the top of the page (left in portrait). The strip has a
        white background so labels sliding underneath it in portrait
        pass behind a clean edge rather than showing through. It is
-       display-only, so it never swallows a click meant for a label
-       or bar beneath it. */
+       interactive — click or drag it to navigate the main timeline
+       (see the minimap listeners in app.js) — so it takes pointer
+       events, and touch-action none so a touch-drag navigates
+       instead of scrolling the page. */
     .minimap {
       position: fixed;
       z-index: 2;
-      pointer-events: none;
+      cursor: grab;
+      touch-action: none;
     }
 
     .minimap-track {

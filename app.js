@@ -361,7 +361,7 @@
       if (event.pointerType !== 'touch') {
         return;
       }
-      if (event.target.closest?.('.zoom-slider')) {
+      if (event.target.closest?.('.zoom-slider, .minimap')) {
         return;
       }
       pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -409,6 +409,52 @@
         event.stopPropagation();
       }
     }, true);
+
+    // Minimap navigation: clicking the minimap jumps the main view
+    // so the clicked point is centred, keeping the current zoom,
+    // and dragging keeps the point under the pointer centred, so
+    // the minimap works like a scrubber. At 1x the whole timeline
+    // is already in view, so there is nowhere to go and a click
+    // does nothing. Pointer capture keeps the drag alive if the
+    // pointer leaves the strip mid-drag.
+    function minimapFractionFromEvent(event) {
+      const rect = minimapTrack.getBoundingClientRect();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const frac = landscape ? (event.clientX - rect.left) / rect.width : (event.clientY - rect.top) / rect.height;
+      return Math.min(1, Math.max(0, frac));
+    }
+
+    function centreViewOnFraction(frac) {
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      const point = frac * trackLength;
+      if (landscape) {
+        window.scrollTo(rect.left + window.scrollX + point - window.innerWidth / 2, window.scrollY);
+      } else {
+        window.scrollTo(window.scrollX, rect.top + window.scrollY + point - window.innerHeight / 2);
+      }
+    }
+
+    let minimapDragging = false;
+    minimapTrack.addEventListener('pointerdown', (event) => {
+      minimapDragging = true;
+      minimapTrack.setPointerCapture(event.pointerId);
+      minimapTrack.style.cursor = 'grabbing';
+      centreViewOnFraction(minimapFractionFromEvent(event));
+    });
+    minimapTrack.addEventListener('pointermove', (event) => {
+      if (!minimapDragging) {
+        return;
+      }
+      centreViewOnFraction(minimapFractionFromEvent(event));
+    });
+    const endMinimapDrag = () => {
+      minimapDragging = false;
+      minimapTrack.style.cursor = '';
+    };
+    minimapTrack.addEventListener('pointerup', endMinimapDrag);
+    minimapTrack.addEventListener('pointercancel', endMinimapDrag);
 
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
