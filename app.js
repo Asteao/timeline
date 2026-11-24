@@ -34,10 +34,15 @@
     // have.
     const ZOOM_STEPS = 128;
     const ZOOM_JUMP = 16;
-    // How much of the viewport a click-to-zoom fit fills: 90%, so
-    // the fitted range lands fully in view with a 5% margin at each
-    // side instead of exactly on the viewport edge.
+    // How much of the viewport a click-to-zoom fit fills: 90% in
+    // landscape, so the fitted range lands fully in view with a 5%
+    // margin at each side instead of exactly on the viewport edge.
+    // Portrait fills 85%: the phone viewport is much shorter in px
+    // while a label is the same absolute size, so 5% there leaves
+    // a tall label almost touching the edge (on a phone with the
+    // address bar shown, the tallest label is clipped outright).
     const FIT_FRACTION = 0.9;
+    const FIT_FRACTION_PORTRAIT = 0.85;
     let maxZoom = 128;
     let zoomStep = 0;
     let zoom = 1;
@@ -125,18 +130,20 @@
     }
 
     // Snap the zoom and scroll so a time range spans the page: the
-    // exact zoom at which the range fills 90% of the viewport, with
-    // the range centred, so the fitted event lands fully in view
-    // with a margin at each side instead of exactly on the
-    // viewport edge. The scale is continuous, so this is the
-    // precise fit rather than the nearest step. Clicking a duration
-    // event's bar or label fits the event itself; clicking an
-    // off-screen label fits the union of the visible range and the
-    // event, so what is already on screen stays in view.
+    // exact zoom at which the range fills 90% of the viewport in
+    // landscape (85% in portrait), with the range centred, so the
+    // fitted event lands fully in view with a margin at each side
+    // instead of exactly on the viewport edge. The scale is
+    // continuous, so this is the precise fit rather than the nearest
+    // step. Clicking a duration event's bar or label fits the event
+    // itself; clicking an off-screen label fits the union of the
+    // visible range and the event, so what is already on screen
+    // stays in view.
     function zoomToRange(startFrac, endFrac) {
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       const span = endFrac - startFrac;
-      const exactFit = FIT_FRACTION / (0.8 * span);
+      const fitFraction = landscape ? FIT_FRACTION : FIT_FRACTION_PORTRAIT;
+      const exactFit = fitFraction / (0.8 * span);
       const step = Math.min(ZOOM_STEPS - 1, Math.max(0, Math.log(exactFit) / Math.log(zoomForStep(1))));
       setZoomStep(step);
 
@@ -196,10 +203,15 @@
 
     // Custom slider, log scale (1x to max zoom). Click or drag on
     // the bar to set the zoom; arrow keys move a single unit when
-    // the bar has focus.
+    // the bar has focus. In portrait the bar runs vertically, so
+    // the fraction is measured from the top: the top is the
+    // maximum zoom and the bottom is 1x.
     function sliderStepFromEvent(event) {
       const rect = zoomTrack.getBoundingClientRect();
-      const frac = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const frac = landscape
+        ? Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
+        : Math.min(1, Math.max(0, 1 - (event.clientY - rect.top) / rect.height));
       return frac * (ZOOM_STEPS - 1);
     }
 
@@ -218,6 +230,13 @@
     });
 
     zoomTrack.addEventListener('pointerup', () => {
+      sliderDragging = false;
+    });
+
+    // If the browser cancels the drag (e.g. it took the gesture
+    // over as a scroll), stop dragging too, or a later pointer
+    // move over the bar would move the zoom unexpectedly.
+    zoomTrack.addEventListener('pointercancel', () => {
       sliderDragging = false;
     });
 
@@ -279,6 +298,115 @@
         zoomIn(anchor);
       }
     });
+
+    // Pinch to zoom on touch screens. Two fingers on the page zoom
+    // the timeline, anchored at the midpoint between them, with the
+    // zoom following the ratio of the finger distance to the distance
+    // when the second finger landed — so spreading the fingers apart
+    // zooms in and bringing them together zooms out, smoothly and
+    // continuously, like the slider. A single finger is left alone:
+    // the body's touch-action (pan-x in landscape, pan-y in
+    // portrait) lets the browser keep single-finger panning, and
+    // hands the two-finger gesture to the page as pointer events
+    // instead of zooming the page itself. Touches starting on the
+    // zoom slider are the slider's own and are ignored here.
+    const pinchPointers = new Map();
+    let pinchStartDistance = 0;
+    let pinchStartZoom = 1;
+    let pinchStartFrac = 0;
+    let pinchEndTime = 0;
+
+    function pinchDistance() {
+      const [a, b] = [...pinchPointers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    function pinchMidpoint() {
+      const [a, b] = [...pinchPointers.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+
+    // The timeline fraction under a client point, clamped to the
+    // timeline itself (a finger over the end padding is outside it).
+    function fracUnderPoint(x, y) {
+      const rect = track.getBoundingClientRect();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const frac = landscape ? (x - rect.left) / rect.width : (y - rect.top) / rect.height;
+      return Math.min(1, Math.max(0, frac));
+    }
+
+    // Zoom to `newZoom` and scroll so the timeline fraction that
+    // was under the pinch's starting midpoint stays under the
+    // midpoint as it moves. Anchoring on that fixed fraction (rather
+    // than re-measuring under the midpoint on every move) means the
+    // content under the fingers never drifts, however the two
+    // fingers take turns moving.
+    function pinchZoomTo(newZoom, midpoint) {
+      const step = Math.log(newZoom) / Math.log(zoomForStep(1));
+      setZoomStep(step);
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      const mid = pinchStartFrac * trackLength;
+      if (landscape) {
+        window.scrollTo(rect.left + window.scrollX + mid - midpoint.x, window.scrollY);
+      } else {
+        window.scrollTo(window.scrollX, rect.top + window.scrollY + mid - midpoint.y);
+      }
+    }
+
+    window.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'touch') {
+        return;
+      }
+      if (event.target.closest?.('.zoom-slider')) {
+        return;
+      }
+      pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchPointers.size === 2) {
+        pinchStartDistance = pinchDistance();
+        pinchStartZoom = zoom;
+        const mid = pinchMidpoint();
+        pinchStartFrac = fracUnderPoint(mid.x, mid.y);
+      }
+    });
+
+    window.addEventListener('pointermove', (event) => {
+      if (!pinchPointers.has(event.pointerId)) {
+        return;
+      }
+      pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pinchPointers.size === 2 && pinchStartDistance > 0) {
+        const newZoom = Math.min(maxZoom, Math.max(1, pinchStartZoom * pinchDistance() / pinchStartDistance));
+        pinchZoomTo(newZoom, pinchMidpoint());
+      }
+    });
+
+    function endPinchPointer(event) {
+      if (!pinchPointers.has(event.pointerId)) {
+        return;
+      }
+      const wasPinching = pinchPointers.size === 2;
+      pinchPointers.delete(event.pointerId);
+      if (wasPinching) {
+        pinchStartDistance = 0;
+        // A pinch ending on a bar or label must not fire that
+        // element's click, which would snap-zoom and undo the
+        // pinch. Clicks for a short while after a pinch are
+        // swallowed below.
+        pinchEndTime = Date.now();
+      }
+    }
+
+    window.addEventListener('pointerup', endPinchPointer);
+    window.addEventListener('pointercancel', endPinchPointer);
+
+    window.addEventListener('click', (event) => {
+      if (Date.now() - pinchEndTime < 350) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, true);
 
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
@@ -477,10 +605,9 @@
       track.appendChild(label);
       // Position it at the viewport edge: measure its size first,
       // then set --pos so its outer edge sits a small gap inside
-      // the viewport. In portrait the bottom edge clears the fixed
-      // zoom slider (48px tall, 1rem from the bottom).
+      // the viewport.
       const size = landscape ? label.offsetWidth : label.offsetHeight;
-      const edgeGap = !landscape && direction > 0 ? 72 : 8;
+      const edgeGap = 8;
       const edgePx = direction < 0
         ? scroll + edgeGap + size / 2
         : scroll + viewport - edgeGap - size / 2;
