@@ -714,6 +714,105 @@
       }
     }
 
+    // The finest time unit that is resolvable at the current zoom:
+    // the finest unit whose ticks would be at least MIN_TICK_SPACING
+    // px apart, the same rule updateTicks uses to decide which units
+    // to draw. Labels use it to decide how specific their timestamp
+    // is (see formatTimestamp). It depends on the zoom and the
+    // viewport, not on scroll, so it only changes when the zoom or
+    // the window size changes.
+    function finestVisibleUnitName() {
+      if (timelineEndMs <= timelineStartMs) {
+        return 'millennium';
+      }
+      const [visStart, visEnd] = visibleFracRange();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const viewport = landscape ? window.innerWidth : window.innerHeight;
+      const rangeMs = timelineEndMs - timelineStartMs;
+      const visSpanMs = (visEnd - visStart) * rangeMs;
+      if (visSpanMs <= 0) {
+        return 'millennium';
+      }
+      const pxPerMs = viewport / visSpanMs;
+      for (const unit of TICK_UNITS) {
+        if (unit.ms * pxPerMs >= MIN_TICK_SPACING) {
+          return unit.name;
+        }
+      }
+      return 'millennium';
+    }
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function ordinal(n) {
+      const suffix = (n % 100 >= 11 && n % 100 <= 13) ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th');
+      return `${n}${suffix}`;
+    }
+
+    // The timestamp for a label: how specific it is depends on the
+    // event's own precision and on how far in you are zoomed. The
+    // finest unit shown is the coarser of the two — a day-precision
+    // event never shows a time, and a second-precision event only
+    // shows seconds once you are zoomed in far enough for second
+    // ticks to resolve. So at 1x a day-precision event reads "Nov 12"
+    // and a second-precision event reads "Nov 13, 22:47"; zoom in and
+    // the second one gains its seconds. The year is added to the date
+    // when the timeline spans more than one calendar year, so a label
+    // is never ambiguous. Only the start time is shown; a duration
+    // event's length is already visible as its bar.
+    function formatTimestamp(event) {
+      const date = new Date(Date.parse(event.start.at));
+      const year = date.getUTCFullYear();
+      const month = date.getUTCMonth();
+      const day = date.getUTCDate();
+      const hour = date.getUTCHours();
+      const minute = date.getUTCMinutes();
+      const second = date.getUTCSeconds();
+      // TICK_UNITS is ordered finest to coarsest, so its index is
+      // the precision rank; an unknown precision is treated as day.
+      let precisionIndex = TICK_UNITS.findIndex((u) => u.name === event.start.precision);
+      if (precisionIndex === -1) {
+        precisionIndex = TICK_UNITS.findIndex((u) => u.name === 'day');
+      }
+      const zoomIndex = TICK_UNITS.findIndex((u) => u.name === finestVisibleUnitName());
+      // The coarser of the two caps the specificity.
+      const displayIndex = Math.max(precisionIndex, zoomIndex);
+      const pad = (n) => String(n).padStart(2, '0');
+      // BCE years are astronomical (year 0 is 1 BCE); show them as
+      // e.g. "44 BCE".
+      const yearLabel = year <= 0 ? `${1 - year} BCE` : `${year}`;
+      // The year is part of the date when the timeline spans more
+      // than one calendar year.
+      const multiYear = new Date(timelineStartMs).getUTCFullYear() !== new Date(timelineEndMs).getUTCFullYear();
+      let datePart;
+      if (precisionIndex <= 3) {
+        // second, minute, hour, day: month and day.
+        datePart = `${MONTH_NAMES[month]} ${day}${multiYear ? `, ${yearLabel}` : ''}`;
+      } else if (precisionIndex === 4) {
+        // month: month and year.
+        datePart = `${MONTH_NAMES[month]} ${yearLabel}`;
+      } else if (precisionIndex === 5) {
+        // year.
+        datePart = yearLabel;
+      } else if (precisionIndex === 6) {
+        // decade: e.g. "2020s".
+        datePart = year > 0 ? `${Math.floor(year / 10) * 10}s` : yearLabel;
+      } else if (precisionIndex === 7) {
+        // century: e.g. "21st century".
+        datePart = year > 0 ? `${ordinal(Math.floor((year - 1) / 100) + 1)} century` : yearLabel;
+      } else {
+        // millennium: e.g. "3rd millennium".
+        datePart = year > 0 ? `${ordinal(Math.floor((year - 1) / 1000) + 1)} millennium` : yearLabel;
+      }
+      let timePart = '';
+      if (displayIndex === 0) {
+        timePart = `, ${pad(hour)}:${pad(minute)}:${pad(second)}`;
+      } else if (displayIndex === 1 || displayIndex === 2) {
+        timePart = `, ${pad(hour)}:${pad(minute)}`;
+      }
+      return datePart + timePart;
+    }
+
     // Labels: one small box per event, title plus the first few words
     // of its description, floating above or below the line. There is
     // only room for some of them, so each label is placed greedily in
@@ -732,6 +831,10 @@
       title.className = 'event-label-title';
       title.textContent = event.title;
       label.appendChild(title);
+      const timestamp = document.createElement('div');
+      timestamp.className = 'event-timestamp';
+      timestamp.textContent = formatTimestamp(event);
+      label.appendChild(timestamp);
       if (event.description) {
         const words = event.description.split(/\s+/);
         const excerpt = document.createElement('div');

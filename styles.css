@@ -291,6 +291,11 @@
       font-weight: 600;
     }
 
+    .event-timestamp {
+      font-size: 11px;
+      color: #777;
+    }
+
     .event-label-excerpt {
       color: #555;
     }
