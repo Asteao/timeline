@@ -1,6 +1,6 @@
     // Relative so a branch preview loads its own copy of the timeline
     // instead of the one on the live site.
-    const TIMELINE_URL = 'timelines/starship-flight-15.json';
+    const TIMELINE_URL = 'timelines/jensen-huang-controversy.json';
 
     let timeline = null;
 
