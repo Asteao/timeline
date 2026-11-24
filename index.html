@@ -18,6 +18,17 @@
     </div>
   </div>
 
+  <!-- Minimap: a second copy of the timeline without labels, fixed
+       to the top of the page (left in portrait), with a box showing
+       the part currently in view. The dots, bars and viewport box
+       are filled in by app.js. -->
+  <div class="minimap" aria-hidden="true">
+    <div class="minimap-track">
+      <div class="minimap-line"></div>
+      <div class="minimap-viewport"></div>
+    </div>
+  </div>
+
   <div class="timeline-pad" aria-hidden="true"></div>
   <div class="timeline-track">
     <div class="timeline-line" aria-hidden="true"></div>

@@ -20,6 +20,8 @@
     }
 
     const track = document.querySelector('.timeline-track');
+    const minimapTrack = document.querySelector('.minimap-track');
+    const minimapViewport = document.querySelector('.minimap-viewport');
 
     // Zoom runs on a 0-127 scale, step 0 showing the whole timeline
     // (1x) and step 127 the maximum. The scale is geometric: each
@@ -359,7 +361,7 @@
       if (event.pointerType !== 'touch') {
         return;
       }
-      if (event.target.closest?.('.zoom-slider')) {
+      if (event.target.closest?.('.zoom-slider, .minimap')) {
         return;
       }
       pinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -407,6 +409,52 @@
         event.stopPropagation();
       }
     }, true);
+
+    // Minimap navigation: clicking the minimap jumps the main view
+    // so the clicked point is centred, keeping the current zoom,
+    // and dragging keeps the point under the pointer centred, so
+    // the minimap works like a scrubber. At 1x the whole timeline
+    // is already in view, so there is nowhere to go and a click
+    // does nothing. Pointer capture keeps the drag alive if the
+    // pointer leaves the strip mid-drag.
+    function minimapFractionFromEvent(event) {
+      const rect = minimapTrack.getBoundingClientRect();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const frac = landscape ? (event.clientX - rect.left) / rect.width : (event.clientY - rect.top) / rect.height;
+      return Math.min(1, Math.max(0, frac));
+    }
+
+    function centreViewOnFraction(frac) {
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      const rect = track.getBoundingClientRect();
+      const trackLength = landscape ? rect.width : rect.height;
+      const point = frac * trackLength;
+      if (landscape) {
+        window.scrollTo(rect.left + window.scrollX + point - window.innerWidth / 2, window.scrollY);
+      } else {
+        window.scrollTo(window.scrollX, rect.top + window.scrollY + point - window.innerHeight / 2);
+      }
+    }
+
+    let minimapDragging = false;
+    minimapTrack.addEventListener('pointerdown', (event) => {
+      minimapDragging = true;
+      minimapTrack.setPointerCapture(event.pointerId);
+      minimapTrack.style.cursor = 'grabbing';
+      centreViewOnFraction(minimapFractionFromEvent(event));
+    });
+    minimapTrack.addEventListener('pointermove', (event) => {
+      if (!minimapDragging) {
+        return;
+      }
+      centreViewOnFraction(minimapFractionFromEvent(event));
+    });
+    const endMinimapDrag = () => {
+      minimapDragging = false;
+      minimapTrack.style.cursor = '';
+    };
+    minimapTrack.addEventListener('pointerup', endMinimapDrag);
+    minimapTrack.addEventListener('pointercancel', endMinimapDrag);
 
     track.style.setProperty('--zoom', zoom);
     syncZoomUI();
@@ -459,6 +507,75 @@
         track.appendChild(dot);
         labelTargets.push({ event, frac: position(starts[index]) });
       });
+    }
+
+    // Minimap: a second copy of the timeline without labels, fixed
+    // to the top of the page (left in portrait). Same dots and bars,
+    // with their colours, at the same time positions — only smaller
+    // (8px instead of 12px) and with no click handlers: it is
+    // display-only. Bars are appended longest first, as in
+    // drawEvents, so a short bar is never hidden under a longer one.
+    function drawMinimap(events) {
+      const starts = events.map((event) => Date.parse(event.start.at));
+      const ends = events.map((event) => (event.end ? Date.parse(event.end.at) : null));
+      const start = Math.min(...starts);
+      const end = Math.max(...starts, ...ends.filter((time) => time !== null));
+      const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
+
+      const bars = [];
+      events.forEach((event, index) => {
+        if (!event.end) {
+          return;
+        }
+        const bar = document.createElement('div');
+        bar.className = 'minimap-bar';
+        bar.setAttribute('aria-hidden', 'true');
+        bar.style.setProperty('--pos', `${position(starts[index])}%`);
+        bar.style.setProperty('--end-pos', `${position(ends[index])}%`);
+        if (event.style && event.style.color) {
+          bar.style.background = event.style.color;
+        }
+        bars.push({ bar, span: ends[index] - starts[index] });
+      });
+      bars.sort((a, b) => b.span - a.span).forEach(({ bar }) => minimapTrack.appendChild(bar));
+
+      events.forEach((event, index) => {
+        if (event.end) {
+          return;
+        }
+        const dot = document.createElement('div');
+        dot.className = 'minimap-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        dot.style.setProperty('--pos', `${position(starts[index])}%`);
+        if (event.style && event.style.color) {
+          dot.style.background = event.style.color;
+        }
+        minimapTrack.appendChild(dot);
+      });
+    }
+
+    // The box on the minimap highlighting the part of the timeline
+    // currently in view: the visible fraction range, mapped onto the
+    // minimap track (which always shows the whole timeline). When
+    // the whole timeline is in view the box would cover the entire
+    // minimap, so there is nothing to highlight: hide it. Re-run
+    // whenever the view changes — zoom and resize via layoutLabels,
+    // scrolling via the scroll listener below.
+    function updateMinimapViewport() {
+      const [visStart, visEnd] = visibleFracRange();
+      if (visStart <= 0 && visEnd >= 1) {
+        minimapViewport.style.display = 'none';
+        return;
+      }
+      minimapViewport.style.display = '';
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      if (landscape) {
+        minimapViewport.style.left = `${visStart * 100}%`;
+        minimapViewport.style.width = `${(visEnd - visStart) * 100}%`;
+      } else {
+        minimapViewport.style.top = `${visStart * 100}%`;
+        minimapViewport.style.height = `${(visEnd - visStart) * 100}%`;
+      }
     }
 
     // Labels: one small box per event, title plus the first few words
@@ -527,6 +644,7 @@
       });
       placedLanes = lanes;
       updateOffscreenLabels();
+      updateMinimapViewport();
     }
 
     // The fraction of the timeline currently on screen, clamped
@@ -638,6 +756,7 @@
       offscreenRaf = requestAnimationFrame(() => {
         offscreenRaf = 0;
         updateOffscreenLabels();
+        updateMinimapViewport();
       });
     }, { passive: true });
 
@@ -648,6 +767,7 @@
         timeline = data;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
         drawEvents(data.events);
+        drawMinimap(data.events);
         computeMaxZoom(data.events);
         layoutLabels();
       })
