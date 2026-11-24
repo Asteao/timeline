@@ -68,9 +68,11 @@
     // Time-scale ticks: short dashes across the timeline marking the
     // boundaries of time units, sized by unit so the scale reads at a
     // glance — seconds are the shortest, then minutes, hours, days,
-    // and on up to millennia: 6px for seconds, growing 2px per level
-    // to 22px for millennia. The units are the data structure's own
-    // precision list (see data-structure.md). Which units appear
+    // and on up to millennia: 4px for seconds, growing 1px per level
+    // to 12px for millennia. The 1px steps mean adjacent units are
+    // barely distinguishable by length; the size cue is now just the
+    // gradient from the shortest to the longest unit. The units are
+    // the data structure's own precision list (see data-structure.md). Which units appear
     // depends on the zoom: a unit is shown only when its ticks are at
     // least MIN_TICK_SPACING px apart, so zooming in reveals finer
     // units and zooming out hides them before they merge into a solid
@@ -81,15 +83,15 @@
     // for the spacing check; the boundaries themselves follow the
     // calendar (1st of the month, Jan 1), see tickBoundaries.
     const TICK_UNITS = [
-      { name: 'second', ms: 1000, size: 6 },
-      { name: 'minute', ms: 60 * 1000, size: 8 },
-      { name: 'hour', ms: 3600 * 1000, size: 10 },
-      { name: 'day', ms: 86400 * 1000, size: 12 },
-      { name: 'month', ms: 30.44 * 86400 * 1000, size: 14 },
-      { name: 'year', ms: 365.25 * 86400 * 1000, size: 16 },
-      { name: 'decade', ms: 10 * 365.25 * 86400 * 1000, size: 18 },
-      { name: 'century', ms: 100 * 365.25 * 86400 * 1000, size: 20 },
-      { name: 'millennium', ms: 1000 * 365.25 * 86400 * 1000, size: 22 },
+      { name: 'second', ms: 1000, size: 4 },
+      { name: 'minute', ms: 60 * 1000, size: 5 },
+      { name: 'hour', ms: 3600 * 1000, size: 6 },
+      { name: 'day', ms: 86400 * 1000, size: 7 },
+      { name: 'month', ms: 30.44 * 86400 * 1000, size: 8 },
+      { name: 'year', ms: 365.25 * 86400 * 1000, size: 9 },
+      { name: 'decade', ms: 10 * 365.25 * 86400 * 1000, size: 10 },
+      { name: 'century', ms: 100 * 365.25 * 86400 * 1000, size: 11 },
+      { name: 'millennium', ms: 1000 * 365.25 * 86400 * 1000, size: 12 },
     ];
     const MIN_TICK_SPACING = 8;
 

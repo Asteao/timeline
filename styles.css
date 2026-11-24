@@ -389,11 +389,12 @@
       }
 
       /* A tick is a vertical dash centred on the line, its length
-         (--tick-size) set by JS from its unit. */
+         (--tick-size) set by JS from its unit. At 1px thick it is
+         a hairline. */
       .timeline-tick {
         left: var(--pos);
         top: 50%;
-        width: 2px;
+        width: 1px;
         height: var(--tick-size);
         transform: translate(-50%, -50%);
       }
@@ -573,7 +574,7 @@
       .timeline-tick {
         top: var(--pos);
         left: 50%;
-        height: 2px;
+        height: 1px;
         width: var(--tick-size);
         transform: translate(-50%, -50%);
       }
