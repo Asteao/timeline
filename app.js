@@ -510,11 +510,18 @@
 
     // The box on the minimap highlighting the part of the timeline
     // currently in view: the visible fraction range, mapped onto the
-    // minimap track (which always shows the whole timeline). Re-run
+    // minimap track (which always shows the whole timeline). When
+    // the whole timeline is in view the box would cover the entire
+    // minimap, so there is nothing to highlight: hide it. Re-run
     // whenever the view changes — zoom and resize via layoutLabels,
     // scrolling via the scroll listener below.
     function updateMinimapViewport() {
       const [visStart, visEnd] = visibleFracRange();
+      if (visStart <= 0 && visEnd >= 1) {
+        minimapViewport.style.display = 'none';
+        return;
+      }
+      minimapViewport.style.display = '';
       const landscape = window.matchMedia('(orientation: landscape)').matches;
       if (landscape) {
         minimapViewport.style.left = `${visStart * 100}%`;
