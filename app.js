@@ -20,6 +20,8 @@
     }
 
     const track = document.querySelector('.timeline-track');
+    const minimapTrack = document.querySelector('.minimap-track');
+    const minimapViewport = document.querySelector('.minimap-viewport');
 
     // Zoom runs on a 0-127 scale, step 0 showing the whole timeline
     // (1x) and step 127 the maximum. The scale is geometric: each
@@ -461,6 +463,68 @@
       });
     }
 
+    // Minimap: a second copy of the timeline without labels, fixed
+    // to the top of the page (left in portrait). Same dots and bars,
+    // with their colours, at the same time positions — only smaller
+    // (8px instead of 12px) and with no click handlers: it is
+    // display-only. Bars are appended longest first, as in
+    // drawEvents, so a short bar is never hidden under a longer one.
+    function drawMinimap(events) {
+      const starts = events.map((event) => Date.parse(event.start.at));
+      const ends = events.map((event) => (event.end ? Date.parse(event.end.at) : null));
+      const start = Math.min(...starts);
+      const end = Math.max(...starts, ...ends.filter((time) => time !== null));
+      const position = (time) => (end === start ? 50 : ((time - start) / (end - start)) * 100);
+
+      const bars = [];
+      events.forEach((event, index) => {
+        if (!event.end) {
+          return;
+        }
+        const bar = document.createElement('div');
+        bar.className = 'minimap-bar';
+        bar.setAttribute('aria-hidden', 'true');
+        bar.style.setProperty('--pos', `${position(starts[index])}%`);
+        bar.style.setProperty('--end-pos', `${position(ends[index])}%`);
+        if (event.style && event.style.color) {
+          bar.style.background = event.style.color;
+        }
+        bars.push({ bar, span: ends[index] - starts[index] });
+      });
+      bars.sort((a, b) => b.span - a.span).forEach(({ bar }) => minimapTrack.appendChild(bar));
+
+      events.forEach((event, index) => {
+        if (event.end) {
+          return;
+        }
+        const dot = document.createElement('div');
+        dot.className = 'minimap-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        dot.style.setProperty('--pos', `${position(starts[index])}%`);
+        if (event.style && event.style.color) {
+          dot.style.background = event.style.color;
+        }
+        minimapTrack.appendChild(dot);
+      });
+    }
+
+    // The box on the minimap highlighting the part of the timeline
+    // currently in view: the visible fraction range, mapped onto the
+    // minimap track (which always shows the whole timeline). Re-run
+    // whenever the view changes — zoom and resize via layoutLabels,
+    // scrolling via the scroll listener below.
+    function updateMinimapViewport() {
+      const [visStart, visEnd] = visibleFracRange();
+      const landscape = window.matchMedia('(orientation: landscape)').matches;
+      if (landscape) {
+        minimapViewport.style.left = `${visStart * 100}%`;
+        minimapViewport.style.width = `${(visEnd - visStart) * 100}%`;
+      } else {
+        minimapViewport.style.top = `${visStart * 100}%`;
+        minimapViewport.style.height = `${(visEnd - visStart) * 100}%`;
+      }
+    }
+
     // Labels: one small box per event, title plus the first few words
     // of its description, floating above or below the line. There is
     // only room for some of them, so each label is placed greedily in
@@ -527,6 +591,7 @@
       });
       placedLanes = lanes;
       updateOffscreenLabels();
+      updateMinimapViewport();
     }
 
     // The fraction of the timeline currently on screen, clamped
@@ -638,6 +703,7 @@
       offscreenRaf = requestAnimationFrame(() => {
         offscreenRaf = 0;
         updateOffscreenLabels();
+        updateMinimapViewport();
       });
     }, { passive: true });
 
@@ -648,6 +714,7 @@
         timeline = data;
         console.log('Loaded timeline:', data.title, `(${data.events.length} events)`);
         drawEvents(data.events);
+        drawMinimap(data.events);
         computeMaxZoom(data.events);
         layoutLabels();
       })
